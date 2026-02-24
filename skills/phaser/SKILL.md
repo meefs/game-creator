@@ -281,6 +281,52 @@ For **character-driven games** (named characters, personalities, mascots), make 
 </style>
 ```
 
+### Portrait-First Games
+
+For vertical game types (dodgers, runners, collectors, endless fallers), force portrait mode regardless of device orientation. Set `FORCE_PORTRAIT = true` in Constants.js — this locks `_isPortrait = true` and uses fixed 540×960 design dimensions. On desktop, `Scale.FIT + CENTER_BOTH` automatically pillarboxes with black bars (no CSS changes needed when `background: #000` is set on body).
+
+```js
+// Constants.js — force portrait for vertical games
+const FORCE_PORTRAIT = true;
+const _isPortrait = FORCE_PORTRAIT || window.innerHeight > window.innerWidth;
+const _designW = 540;
+const _designH = 960;
+```
+
+Without this, desktop browsers stretch the game to landscape, ruining the vertical layout. The template default is `FORCE_PORTRAIT = false` (auto-detect orientation).
+
+### Visible Touch Controls
+
+Always show visual touch indicators on touch-capable devices — never rely on invisible tap zones. Use **capability detection** (not OS-based detection) to determine touch support:
+
+```js
+// Good — detects touch laptops, tablets, 2-in-1s
+const hasTouch = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
+
+// Bad — misses touch-screen laptops, iPadOS (reports as desktop)
+const isMobile = device.os.android || device.os.iOS;
+```
+
+Render semi-transparent arrow buttons (or direction indicators) at the bottom of the screen. Use `TOUCH` constants from Constants.js for sizing (12% of canvas width), alpha (0.35 idle / 0.6 active), and margins. Update alpha in the `update()` loop based on input state for visual feedback.
+
+Enable pointer input (pointerdown, pointermove, pointerup) on **all** devices — pointer events work for both mouse and touch. This eliminates the need for separate mobile/desktop input code paths.
+
+### Minimum Entity Sizes for Mobile
+
+Collectibles, hazards, and interactive items must be at least **7–8% of `GAME.WIDTH`** to be recognizable on phone screens. Smaller entities become indistinguishable blobs on mobile.
+
+```js
+// Good — recognizable on mobile
+ATTACK_WIDTH: _canvasW * 0.09,
+POWERUP_WIDTH: _canvasW * 0.072,
+
+// Bad — too small on phone screens
+ATTACK_WIDTH: _canvasW * 0.04,
+POWERUP_WIDTH: _canvasW * 0.035,
+```
+
+For the main player character, use 12–15% of `GAME.WIDTH` (see Entity Sizing above).
+
 ### Button Pattern (Container + Graphics + Text)
 
 Buttons require careful z-ordering. Use a Container holding Graphics (background) then Text (label) — in that order. The Container itself is interactive.

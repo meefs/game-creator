@@ -3,8 +3,11 @@
 // Device pixel ratio (capped at 2 for mobile GPU performance)
 export const DPR = Math.min(window.devicePixelRatio || 1, 2);
 
-// Orientation: landscape on desktop, portrait on mobile
-const _isPortrait = window.innerHeight > window.innerWidth;
+// Force portrait mode — set to true for vertical games (dodgers, runners, collectors).
+// On desktop, Scale.FIT + CENTER_BOTH will pillarbox with black bars automatically.
+// Set to false (default) for games that should adapt to device orientation.
+const FORCE_PORTRAIT = false;
+const _isPortrait = FORCE_PORTRAIT || window.innerHeight > window.innerWidth;
 
 // Design dimensions (logical game units at 1x scale)
 const _designW = _isPortrait ? 540 : 960;
@@ -102,6 +105,19 @@ export const UI = {
   BTN_RADIUS: 12 * PX,        // button corner radius
   MIN_TOUCH: 44 * PX,         // minimum touch target
   // Score HUD omitted — Play.fun widget displays score in SAFE_ZONE.TOP area
+};
+
+// --- Visible Touch Controls ---
+// Semi-transparent arrow indicators for touch-capable devices.
+// Use capability detection: ('ontouchstart' in window) || (navigator.maxTouchPoints > 0)
+
+export const TOUCH = {
+  BUTTON_SIZE: GAME.WIDTH * 0.12,       // 12% of canvas width
+  ALPHA_IDLE: 0.35,
+  ALPHA_ACTIVE: 0.6,
+  MARGIN_X: GAME.WIDTH * 0.08,          // Inset from screen edge
+  MARGIN_BOTTOM: GAME.HEIGHT * 0.06,    // Up from bottom
+  ARROW_COLOR: 0xffffff,
 };
 
 // --- Transitions ---

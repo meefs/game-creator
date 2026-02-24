@@ -3,12 +3,14 @@
 // Device pixel ratio (capped at 2 for mobile GPU performance)
 export const DPR = Math.min(window.devicePixelRatio || 1, 2);
 
-// Orientation: landscape on desktop, portrait on mobile
-const _isPortrait = window.innerHeight > window.innerWidth;
+// Force portrait layout — vertical dodger games must always be portrait.
+// On desktop, Scale.FIT + CENTER_BOTH will pillarbox with black bars automatically.
+const FORCE_PORTRAIT = true;
+const _isPortrait = FORCE_PORTRAIT || window.innerHeight > window.innerWidth;
 
 // Design dimensions (logical game units at 1x scale)
-const _designW = _isPortrait ? 540 : 960;
-const _designH = _isPortrait ? 960 : 540;
+const _designW = 540;
+const _designH = 960;
 const _designAspect = _designW / _designH;
 
 // Canvas dimensions = device pixel area, maintaining design aspect ratio.
@@ -116,17 +118,17 @@ export const ANDROGENIC = {
 // --- Projectiles ---
 
 export const PROJECTILE = {
-  // Attacks (thrown by Androgenic) — sized up 20% for visibility
-  ATTACK_WIDTH: _canvasW * 0.06,
-  ATTACK_HEIGHT: _canvasW * 0.048,
+  // Attacks (thrown by Androgenic) — sized for mobile readability
+  ATTACK_WIDTH: _canvasW * 0.09,
+  ATTACK_HEIGHT: _canvasW * 0.072,
   ATTACK_SPEED_MIN: 150 * PX,
   ATTACK_SPEED_MAX: 280 * PX,
   ATTACK_COLOR_WIG: 0x5C3317,     // Brown wig
   ATTACK_COLOR_HAT: 0x333333,     // Dark cap/hat
 
-  // Power-ups (falling collectibles) — sized up 20% for visibility
-  POWERUP_WIDTH: _canvasW * 0.048,
-  POWERUP_HEIGHT: _canvasW * 0.072,
+  // Power-ups (falling collectibles) — sized for mobile readability
+  POWERUP_WIDTH: _canvasW * 0.072,
+  POWERUP_HEIGHT: _canvasW * 0.108,
   POWERUP_SPEED_MIN: 100 * PX,
   POWERUP_SPEED_MAX: 200 * PX,
   POWERUP_COLOR_SHAKE: 0x22CC55,  // Bright green protein shake
@@ -315,4 +317,15 @@ export const EFFECTS = {
   GAMEOVER_FLASH_DURATION: 250,
   GAMEOVER_PANEL_SCALE_DURATION: 500,
   GAMEOVER_TITLE_GLOW_ALPHA: 0.6,
+};
+
+// --- Touch Controls ---
+
+export const TOUCH = {
+  BUTTON_SIZE: _canvasW * 0.12,       // 12% of canvas width
+  ALPHA_IDLE: 0.35,
+  ALPHA_ACTIVE: 0.6,
+  MARGIN_X: _canvasW * 0.08,          // Inset from screen edge
+  MARGIN_BOTTOM: _canvasH * 0.06,     // Up from bottom
+  ARROW_COLOR: 0xffffff,
 };

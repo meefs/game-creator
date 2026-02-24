@@ -2,7 +2,7 @@ import Phaser from 'phaser';
 import {
   GAME, CLAVICULAR, ANDROGENIC, COLORS, PX, TRANSITION,
   SAFE_ZONE, LIVES, MOG, PROJECTILE, EXPRESSION, EXPRESSION_HOLD_MS,
-  EFFECTS,
+  EFFECTS, TOUCH,
 } from '../core/Constants.js';
 import { eventBus, Events } from '../core/EventBus.js';
 import { gameState } from '../core/GameState.js';
@@ -22,9 +22,8 @@ export class GameScene extends Phaser.Scene {
   create() {
     gameState.reset();
 
-    // Mobile detection
-    this.isMobile = this.sys.game.device.os.android ||
-      this.sys.game.device.os.iOS || this.sys.game.device.os.iPad;
+    // Touch capability detection (not OS-based — covers tablets, 2-in-1s, touch laptops)
+    this.hasTouch = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
 
     // --- Arena background ---
     this.drawArenaBackground();
@@ -53,23 +52,37 @@ export class GameScene extends Phaser.Scene {
     // --- Keyboard input ---
     this.cursors = this.input.keyboard.createCursorKeys();
 
-    // Touch input state
+    // Touch input state — enabled on ALL devices (pointer events work for mouse too)
     this.touchLeft = false;
     this.touchRight = false;
 
-    // Tap-zone input: left half = left, right half = right
-    if (this.isMobile) {
-      this.input.on('pointerdown', (pointer) => {
-        if (pointer.x < GAME.WIDTH / 2) {
-          this.touchLeft = true;
-        } else {
-          this.touchRight = true;
-        }
-      });
-      this.input.on('pointerup', () => {
-        this.touchLeft = false;
+    this.input.on('pointerdown', (pointer) => {
+      if (pointer.x < GAME.WIDTH / 2) {
+        this.touchLeft = true;
         this.touchRight = false;
-      });
+      } else {
+        this.touchRight = true;
+        this.touchLeft = false;
+      }
+    });
+    this.input.on('pointermove', (pointer) => {
+      if (!pointer.isDown) return;
+      if (pointer.x < GAME.WIDTH / 2) {
+        this.touchLeft = true;
+        this.touchRight = false;
+      } else {
+        this.touchRight = true;
+        this.touchLeft = false;
+      }
+    });
+    this.input.on('pointerup', () => {
+      this.touchLeft = false;
+      this.touchRight = false;
+    });
+
+    // Visible touch arrow buttons (shown on touch-capable devices)
+    if (this.hasTouch) {
+      this.createTouchControls();
     }
 
     // --- Event listeners ---
@@ -191,6 +204,40 @@ export class GameScene extends Phaser.Scene {
       repeat: -1,
       ease: 'Sine.easeInOut',
     });
+  }
+
+  createTouchControls() {
+    const size = TOUCH.BUTTON_SIZE;
+    const r = size / 2;
+    const y = GAME.HEIGHT - TOUCH.MARGIN_BOTTOM - r;
+
+    // Left arrow button
+    this.touchBtnLeft = this.add.graphics();
+    const lx = TOUCH.MARGIN_X + r;
+    this.touchBtnLeft.fillStyle(TOUCH.ARROW_COLOR, TOUCH.ALPHA_IDLE);
+    this.touchBtnLeft.fillCircle(lx, y, r);
+    // Left-pointing triangle
+    this.touchBtnLeft.fillStyle(0x000000, 0.5);
+    this.touchBtnLeft.fillTriangle(
+      lx - r * 0.35, y,
+      lx + r * 0.25, y - r * 0.4,
+      lx + r * 0.25, y + r * 0.4
+    );
+    this.touchBtnLeft.setDepth(30);
+
+    // Right arrow button
+    this.touchBtnRight = this.add.graphics();
+    const rx = GAME.WIDTH - TOUCH.MARGIN_X - r;
+    this.touchBtnRight.fillStyle(TOUCH.ARROW_COLOR, TOUCH.ALPHA_IDLE);
+    this.touchBtnRight.fillCircle(rx, y, r);
+    // Right-pointing triangle
+    this.touchBtnRight.fillStyle(0x000000, 0.5);
+    this.touchBtnRight.fillTriangle(
+      rx + r * 0.35, y,
+      rx - r * 0.25, y - r * 0.4,
+      rx - r * 0.25, y + r * 0.4
+    );
+    this.touchBtnRight.setDepth(30);
   }
 
   createHUD() {
@@ -350,6 +397,14 @@ export class GameScene extends Phaser.Scene {
 
     // --- Update effects ---
     this.particleManager.update(delta, this.player);
+
+    // --- Update touch button feedback ---
+    if (this.touchBtnLeft) {
+      this.touchBtnLeft.setAlpha(this.touchLeft ? TOUCH.ALPHA_ACTIVE : TOUCH.ALPHA_IDLE);
+    }
+    if (this.touchBtnRight) {
+      this.touchBtnRight.setAlpha(this.touchRight ? TOUCH.ALPHA_ACTIVE : TOUCH.ALPHA_IDLE);
+    }
 
     // --- Update HUD ---
     this.updateHUD();
