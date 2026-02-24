@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { GAME, PLAYER, COLORS, PX, TRANSITION, SAFE_ZONE, NEAR_MISS, BIT } from '../core/Constants.js';
+import { GAME, PLAYER, COLORS, PX, TRANSITION, SAFE_ZONE, NEAR_MISS, BIT, EXPRESSION, EXPRESSION_HOLD_MS, MATRIX_RAIN } from '../core/Constants.js';
 import { eventBus, Events } from '../core/EventBus.js';
 import { gameState } from '../core/GameState.js';
 import { Player } from '../entities/Player.js';
@@ -19,8 +19,12 @@ export class GameScene extends Phaser.Scene {
     this.isMobile = this.sys.game.device.os.android ||
       this.sys.game.device.os.iOS || this.sys.game.device.os.iPad;
 
-    // --- Background grid (subtle cyberpunk grid) ---
+    // --- Background grid (depth -10) ---
     this.drawGrid();
+
+    // --- Matrix rain background effect (depth -5) ---
+    this.matrixRainPool = [];
+    this.createMatrixRain();
 
     // --- Player (Nick Land) ---
     this.player = new Player(this);
@@ -85,6 +89,25 @@ export class GameScene extends Phaser.Scene {
     // --- Track bits that pass the player line for dodge/near-miss detection ---
     this.dodgeCheckY = PLAYER.START_Y + PLAYER.HEIGHT / 2;
 
+    // --- Wire EventBus to player expressions ---
+    this._onScoreChanged = () => {
+      this.player.setExpression(EXPRESSION.HAPPY);
+    };
+    this._onPlayerHit = () => {
+      this.player.setExpression(EXPRESSION.ANGRY);
+    };
+    this._onNearMiss = () => {
+      this.player.setExpression(EXPRESSION.SURPRISED);
+    };
+    this._onSpeedIncreased = () => {
+      this.player.setExpression(EXPRESSION.SURPRISED, 1000);
+    };
+
+    eventBus.on(Events.SCORE_CHANGED, this._onScoreChanged);
+    eventBus.on(Events.PLAYER_HIT, this._onPlayerHit);
+    eventBus.on(Events.SPECTACLE_NEAR_MISS, this._onNearMiss);
+    eventBus.on(Events.SPEED_INCREASED, this._onSpeedIncreased);
+
     gameState.started = true;
 
     // Emit entrance spectacle
@@ -109,10 +132,13 @@ export class GameScene extends Phaser.Scene {
 
     // Check for dodged bits (bits that passed below player without hitting)
     this.checkDodgedBits();
+
+    // Update matrix rain
+    this.updateMatrixRain(delta);
   }
 
   /**
-   * Check for bits that have fallen past the player — count as dodged.
+   * Check for bits that have fallen past the player -- count as dodged.
    * Near-miss detection: bit x was within 20% of player width from player center.
    */
   checkDodgedBits() {
@@ -131,7 +157,7 @@ export class GameScene extends Phaser.Scene {
         const dx = Math.abs(bit.container.x - playerX);
 
         if (dx < nearMissRange + playerW * 0.5) {
-          // Near-miss — bit was very close
+          // Near-miss -- bit was very close
           eventBus.emit(Events.SPECTACLE_NEAR_MISS, {
             x: bit.container.x,
             y: bit.container.y,
@@ -154,7 +180,7 @@ export class GameScene extends Phaser.Scene {
   /**
    * Called when player overlaps with a bit.
    */
-  onPlayerHit(playerContainer, bitContainer) {
+  onPlayerHit(playerSprite, bitContainer) {
     if (gameState.gameOver) return;
 
     // Find the bit object for this container
@@ -168,8 +194,8 @@ export class GameScene extends Phaser.Scene {
     if (gameState.gameOver) return;
     gameState.gameOver = true;
 
-    // Flash player red
-    this.player.setExpression('hit');
+    // Flash player angry
+    this.player.setExpression(EXPRESSION.ANGRY);
 
     eventBus.emit(Events.PLAYER_HIT, {
       score: gameState.score,
@@ -185,8 +211,10 @@ export class GameScene extends Phaser.Scene {
     });
   }
 
+  // --- Background Grid ---
+
   /**
-   * Draw a subtle grid pattern on the background.
+   * Draw a subtle grid pattern on the background at depth -10.
    */
   drawGrid() {
     const gfx = this.add.graphics();
@@ -207,6 +235,106 @@ export class GameScene extends Phaser.Scene {
     }
 
     gfx.strokePath();
-    gfx.setDepth(-1);
+    gfx.setDepth(-10);
+  }
+
+  // --- Matrix Rain Background Effect ---
+
+  /**
+   * Create a pool of slow-scrolling text characters for ambient matrix rain.
+   * Depth -5, very low alpha -- creates atmosphere without distraction.
+   */
+  createMatrixRain() {
+    for (let i = 0; i < MATRIX_RAIN.POOL_SIZE; i++) {
+      const char = Phaser.Utils.Array.GetRandom(MATRIX_RAIN.CHARACTERS);
+      const color = Phaser.Utils.Array.GetRandom(COLORS.NEON_COLORS);
+      const alpha = Phaser.Math.FloatBetween(MATRIX_RAIN.ALPHA_MIN, MATRIX_RAIN.ALPHA_MAX);
+      const fontSizeRatio = Phaser.Math.FloatBetween(MATRIX_RAIN.FONT_SIZE_MIN, MATRIX_RAIN.FONT_SIZE_MAX);
+      const fontSize = Math.round(GAME.HEIGHT * fontSizeRatio);
+
+      const text = this.add.text(0, 0, char, {
+        fontSize: fontSize + 'px',
+        fontFamily: '"Courier New", Courier, monospace',
+        color: color,
+        alpha: alpha,
+      }).setOrigin(0.5);
+
+      text.setDepth(MATRIX_RAIN.DEPTH);
+
+      // Randomize initial position across entire screen
+      const x = Phaser.Math.Between(0, GAME.WIDTH);
+      const y = Phaser.Math.Between(0, GAME.HEIGHT);
+      text.setPosition(x, y);
+
+      // Assign a fall speed in canvas-pixel space
+      const speed = Phaser.Math.FloatBetween(MATRIX_RAIN.SPEED_MIN, MATRIX_RAIN.SPEED_MAX) * PX;
+
+      this.matrixRainPool.push({
+        text,
+        speed,
+      });
+    }
+  }
+
+  /**
+   * Update matrix rain -- move down, recycle when off-screen.
+   */
+  updateMatrixRain(delta) {
+    const dt = delta / 1000; // convert ms to seconds
+    for (const drop of this.matrixRainPool) {
+      drop.text.y += drop.speed * dt;
+
+      // Recycle when off screen bottom
+      if (drop.text.y > GAME.HEIGHT + 50) {
+        drop.text.y = -50;
+        drop.text.x = Phaser.Math.Between(0, GAME.WIDTH);
+
+        // Randomize character and appearance on recycle
+        const char = Phaser.Utils.Array.GetRandom(MATRIX_RAIN.CHARACTERS);
+        const color = Phaser.Utils.Array.GetRandom(COLORS.NEON_COLORS);
+        const alpha = Phaser.Math.FloatBetween(MATRIX_RAIN.ALPHA_MIN, MATRIX_RAIN.ALPHA_MAX);
+        drop.text.setText(char);
+        drop.text.setColor(color);
+        drop.text.setAlpha(alpha);
+
+        // Re-randomize speed
+        drop.speed = Phaser.Math.FloatBetween(MATRIX_RAIN.SPEED_MIN, MATRIX_RAIN.SPEED_MAX) * PX;
+      }
+    }
+  }
+
+  // --- Cleanup ---
+
+  /**
+   * Remove EventBus listeners on scene shutdown to prevent leaks on restart.
+   */
+  shutdown() {
+    eventBus.off(Events.SCORE_CHANGED, this._onScoreChanged);
+    eventBus.off(Events.PLAYER_HIT, this._onPlayerHit);
+    eventBus.off(Events.SPECTACLE_NEAR_MISS, this._onNearMiss);
+    eventBus.off(Events.SPEED_INCREASED, this._onSpeedIncreased);
+
+    // Clean up player expression timer
+    if (this.player) {
+      this.player.destroy();
+    }
+
+    // Clean up bit spawner
+    if (this.bitSpawner) {
+      this.bitSpawner.destroy();
+    }
+
+    // Clean up score system
+    if (this.scoreSystem) {
+      this.scoreSystem.destroy();
+    }
+
+    // Clean up matrix rain text objects
+    if (this.matrixRainPool) {
+      for (const drop of this.matrixRainPool) {
+        drop.text.destroy();
+      }
+      this.matrixRainPool = [];
+    }
   }
 }

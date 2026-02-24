@@ -151,3 +151,28 @@ export const TRANSITION = {
 export const NEAR_MISS = {
   THRESHOLD: 0.20, // 20% of player width
 };
+
+// --- Expressions (Nick Land spritesheet) ---
+// Spritesheet: 800x300, 4 frames (200x300 each), horizontal strip
+// Frame indices: 0=normal, 1=happy, 2=angry, 3=surprised
+export const EXPRESSION = {
+  NORMAL: 0,
+  HAPPY: 1,
+  ANGRY: 2,
+  SURPRISED: 3,
+};
+export const EXPRESSION_HOLD_MS = 600;
+
+// --- Matrix Rain (background ambiance) ---
+
+export const MATRIX_RAIN = {
+  POOL_SIZE: 20,
+  ALPHA_MIN: 0.1,
+  ALPHA_MAX: 0.2,
+  SPEED_MIN: 30,  // pixels per second (design space)
+  SPEED_MAX: 80,
+  FONT_SIZE_MIN: 0.02,  // as ratio of GAME.HEIGHT
+  FONT_SIZE_MAX: 0.04,
+  DEPTH: -5,
+  CHARACTERS: ['0', '1', '\u221E', '\u03A9', '\u0394', '\u00A7', '//', '{}', '<>', '\u03B1', '\u03B2', '\u03BB'],
+};
