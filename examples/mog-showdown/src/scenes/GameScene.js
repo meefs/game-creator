@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 import {
   GAME, CLAVICULAR, ANDROGENIC, COLORS, PX, TRANSITION,
   SAFE_ZONE, LIVES, MOG, PROJECTILE, EXPRESSION, EXPRESSION_HOLD_MS,
+  EFFECTS,
 } from '../core/Constants.js';
 import { eventBus, Events } from '../core/EventBus.js';
 import { gameState } from '../core/GameState.js';
@@ -9,6 +10,9 @@ import { Clavicular } from '../entities/Clavicular.js';
 import { Androgenic } from '../entities/Androgenic.js';
 import { SpawnSystem } from '../systems/SpawnSystem.js';
 import { ScoreSystem } from '../systems/ScoreSystem.js';
+import { ParticleManager } from '../effects/ParticleManager.js';
+import { ScreenEffects } from '../effects/ScreenEffects.js';
+import { TextEffects } from '../effects/TextEffects.js';
 
 export class GameScene extends Phaser.Scene {
   constructor() {
@@ -37,6 +41,11 @@ export class GameScene extends Phaser.Scene {
     // --- Systems ---
     this.spawnSystem = new SpawnSystem(this, this.androgenic);
     this.scoreSystem = new ScoreSystem();
+
+    // --- Effects systems (spectacle-first visual design) ---
+    this.particleManager = new ParticleManager(this);
+    this.screenEffects = new ScreenEffects(this);
+    this.textEffects = new TextEffects(this);
 
     // --- HUD ---
     this.createHUD();
@@ -160,6 +169,25 @@ export class GameScene extends Phaser.Scene {
     floor.moveTo(0, floorY);
     floor.lineTo(GAME.WIDTH, floorY);
     floor.strokePath();
+
+    // Animated neon glow line on floor (additive blend, subtle pulse)
+    this.floorGlow = this.add.graphics();
+    this.floorGlow.lineStyle(4 * PX, COLORS.FLOOR_LINE, 0.3);
+    this.floorGlow.beginPath();
+    this.floorGlow.moveTo(0, floorY);
+    this.floorGlow.lineTo(GAME.WIDTH, floorY);
+    this.floorGlow.strokePath();
+    this.floorGlow.setBlendMode(Phaser.BlendModes.ADD);
+
+    // Pulse the floor glow
+    this.tweens.add({
+      targets: this.floorGlow,
+      alpha: { from: 0.2, to: 0.6 },
+      duration: 1500,
+      yoyo: true,
+      repeat: -1,
+      ease: 'Sine.easeInOut',
+    });
   }
 
   createHUD() {
@@ -202,20 +230,7 @@ export class GameScene extends Phaser.Scene {
       }
     ).setOrigin(0.5, 0);
 
-    // --- Combo display (hidden initially) ---
-    const comboSize = Math.round(GAME.HEIGHT * 0.028);
-    this.comboText = this.add.text(
-      GAME.WIDTH / 2,
-      SAFE_ZONE.TOP + 45 * PX,
-      '',
-      {
-        fontSize: comboSize + 'px',
-        fontFamily: 'system-ui, sans-serif',
-        color: '#FF69B4',
-        fontStyle: 'bold',
-        shadow: { offsetX: 0, offsetY: 1, color: 'rgba(0,0,0,0.6)', blur: 3, fill: true },
-      }
-    ).setOrigin(0.5, 0).setAlpha(0);
+    // Combo display is now handled by TextEffects (spectacle combo counter)
   }
 
   drawHearts() {
@@ -290,9 +305,14 @@ export class GameScene extends Phaser.Scene {
     this.tweens.add({
       targets: this.player.sprite,
       y: targetPlayerY,
-      duration: 800,
+      duration: EFFECTS.ENTRANCE_PLAYER_SLAM_DURATION,
       ease: 'Bounce.easeOut',
       onComplete: () => {
+        // Landing camera shake
+        this.cameras.main.shake(
+          EFFECTS.SHAKE_DURATION_MEDIUM,
+          EFFECTS.ENTRANCE_PLAYER_SHAKE
+        );
         eventBus.emit(Events.SPECTACLE_ENTRANCE, { entity: 'clavicular' });
       },
     });
@@ -324,6 +344,9 @@ export class GameScene extends Phaser.Scene {
 
     // --- Collision detection ---
     this.checkCollisions();
+
+    // --- Update effects ---
+    this.particleManager.update(delta, this.player);
 
     // --- Update HUD ---
     this.updateHUD();
@@ -400,22 +423,7 @@ export class GameScene extends Phaser.Scene {
       onComplete: () => proj.destroy(),
     });
 
-    // Floating "+1" text
-    const plusText = this.add.text(proj.sprite.x, proj.sprite.y, '+1', {
-      fontSize: Math.round(GAME.HEIGHT * 0.03) + 'px',
-      fontFamily: 'system-ui, sans-serif',
-      color: COLORS.SCORE_GOLD,
-      fontStyle: 'bold',
-      shadow: { offsetX: 0, offsetY: 1, color: 'rgba(0,0,0,0.8)', blur: 3, fill: true },
-    }).setOrigin(0.5);
-
-    this.tweens.add({
-      targets: plusText,
-      y: plusText.y - 40 * PX,
-      alpha: 0,
-      duration: 600,
-      onComplete: () => plusText.destroy(),
-    });
+    // Floating score text is now handled by TextEffects via SCORE_CHANGED event
   }
 
   hitByAttack(proj) {
@@ -439,33 +447,43 @@ export class GameScene extends Phaser.Scene {
     // Flash damage on player
     this.player.flashDamage();
 
-    // Camera shake
-    this.cameras.main.shake(200, 0.01);
+    // Screen shake and effects handled by ScreenEffects via ATTACK_HIT event
   }
 
   onLifeLost(data) {
     this.drawHearts();
 
-    // Show "OUCH" text briefly
+    // Show "OUCH" text with dramatic scale punch
     if (data.lives > 0) {
       const ouchText = this.add.text(
         this.player.sprite.x,
         this.player.sprite.y - CLAVICULAR.HEIGHT * 0.8,
         'OUCH!',
         {
-          fontSize: Math.round(GAME.HEIGHT * 0.04) + 'px',
+          fontSize: Math.round(GAME.HEIGHT * 0.045) + 'px',
           fontFamily: 'system-ui, sans-serif',
           color: '#FF3366',
           fontStyle: 'bold',
-          shadow: { offsetX: 0, offsetY: 2, color: 'rgba(0,0,0,0.8)', blur: 4, fill: true },
+          shadow: { offsetX: 0, offsetY: 2, color: 'rgba(0,0,0,0.8)', blur: 6, fill: true },
         }
-      ).setOrigin(0.5);
+      ).setOrigin(0.5).setScale(EFFECTS.FLOAT_TEXT_START_SCALE).setDepth(20);
+
+      // Elastic scale-in
+      this.tweens.add({
+        targets: ouchText,
+        scaleX: 1,
+        scaleY: 1,
+        duration: 250,
+        ease: 'Elastic.easeOut',
+      });
 
       this.tweens.add({
         targets: ouchText,
-        y: ouchText.y - 30 * PX,
+        y: ouchText.y - 40 * PX,
         alpha: 0,
-        duration: 800,
+        duration: 700,
+        delay: 150,
+        ease: 'Sine.easeOut',
         onComplete: () => ouchText.destroy(),
       });
     }
@@ -480,36 +498,59 @@ export class GameScene extends Phaser.Scene {
     // Expose Androgenic's wig
     this.androgenic.exposeWig(MOG.FRAME_MOG_DURATION);
 
-    // Screen flash gold
+    // Screen flash gold (ScreenEffects also adds shake + pulse via EventBus)
     this.cameras.main.flash(400, 255, 215, 0);
 
-    // Show "FRAME MOG!" text
-    const mogText = this.add.text(GAME.WIDTH / 2, GAME.HEIGHT * 0.45, 'FRAME MOG!', {
-      fontSize: Math.round(GAME.HEIGHT * 0.07) + 'px',
+    // Glow layer (additive)
+    const mogGlow = this.add.text(GAME.WIDTH / 2, GAME.HEIGHT * 0.42, 'FRAME MOG!', {
+      fontSize: Math.round(GAME.HEIGHT * 0.075) + 'px',
       fontFamily: 'system-ui, sans-serif',
       color: '#FFD700',
       fontStyle: 'bold',
-      shadow: { offsetX: 0, offsetY: 3, color: 'rgba(0,0,0,0.8)', blur: 8, fill: true },
-    }).setOrigin(0.5).setScale(0);
+      shadow: { offsetX: 0, offsetY: 0, color: 'rgba(255,215,0,0.8)', blur: 30, fill: true },
+    }).setOrigin(0.5).setScale(0).setDepth(25).setBlendMode(Phaser.BlendModes.ADD);
 
+    // Main "FRAME MOG!" text
+    const mogText = this.add.text(GAME.WIDTH / 2, GAME.HEIGHT * 0.42, 'FRAME MOG!', {
+      fontSize: Math.round(GAME.HEIGHT * 0.075) + 'px',
+      fontFamily: 'system-ui, sans-serif',
+      color: '#FFD700',
+      fontStyle: 'bold',
+      shadow: { offsetX: 0, offsetY: 3, color: 'rgba(0,0,0,0.8)', blur: 10, fill: true },
+    }).setOrigin(0.5).setScale(0).setDepth(26);
+
+    // Slam-in with overshoot
     this.tweens.add({
-      targets: mogText,
-      scaleX: 1.2,
-      scaleY: 1.2,
-      duration: 300,
+      targets: [mogText, mogGlow],
+      scaleX: 1.4,
+      scaleY: 1.4,
+      duration: 250,
       ease: 'Back.easeOut',
       onComplete: () => {
+        // Settle
         this.tweens.add({
-          targets: mogText,
-          scaleX: 1,
-          scaleY: 1,
-          alpha: 0,
-          y: mogText.y - 30 * PX,
-          duration: 500,
-          delay: 300,
+          targets: [mogText, mogGlow],
+          scaleX: 1.1,
+          scaleY: 1.1,
+          duration: 150,
+          ease: 'Sine.easeOut',
           onComplete: () => {
-            mogText.destroy();
-            this.frameMogActive = false;
+            // Float up and fade
+            this.tweens.add({
+              targets: [mogText, mogGlow],
+              scaleX: 0.9,
+              scaleY: 0.9,
+              alpha: 0,
+              y: mogText.y - 40 * PX,
+              duration: 500,
+              delay: 350,
+              ease: 'Sine.easeIn',
+              onComplete: () => {
+                mogText.destroy();
+                mogGlow.destroy();
+                this.frameMogActive = false;
+              },
+            });
           },
         });
       },
@@ -520,16 +561,24 @@ export class GameScene extends Phaser.Scene {
   }
 
   updateHUD() {
-    // Score
-    this.scoreText.setText(`${gameState.score}`);
-
-    // Combo
-    if (gameState.combo > 1) {
-      this.comboText.setText(`${gameState.combo}x COMBO`);
-      this.comboText.setAlpha(1);
-    } else {
-      this.comboText.setAlpha(0);
+    // Score with punch animation on change
+    const newScore = `${gameState.score}`;
+    if (this.scoreText.text !== newScore) {
+      this.scoreText.setText(newScore);
+      // Punch scale animation on score change
+      if (!this._scoreTween || !this._scoreTween.isPlaying()) {
+        this._scoreTween = this.tweens.add({
+          targets: this.scoreText,
+          scaleX: 1.3,
+          scaleY: 1.3,
+          duration: 80,
+          yoyo: true,
+          ease: 'Sine.easeOut',
+        });
+      }
     }
+
+    // Combo display handled by TextEffects via EventBus
 
     // Mog bar
     this.drawMogBar();
@@ -539,8 +588,11 @@ export class GameScene extends Phaser.Scene {
     if (gameState.gameOver) return;
     gameState.gameOver = true;
 
-    // Camera shake
-    this.cameras.main.shake(400, 0.02);
+    // Heavy camera shake
+    this.cameras.main.shake(400, EFFECTS.SHAKE_HEAVY);
+
+    // Red flash on death
+    this.cameras.main.flash(300, 255, 50, 50);
 
     // Slow-mo death effect
     this.time.timeScale = 0.3;
@@ -567,6 +619,11 @@ export class GameScene extends Phaser.Scene {
 
     if (this.scoreSystem) this.scoreSystem.destroy();
     if (this.spawnSystem) this.spawnSystem.destroy();
+
+    // Clean up effect systems
+    if (this.particleManager) this.particleManager.destroy();
+    if (this.screenEffects) this.screenEffects.destroy();
+    if (this.textEffects) this.textEffects.destroy();
   }
 
   shutdown() {

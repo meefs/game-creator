@@ -33,6 +33,65 @@
 - **Idle animations**: Both characters have breathing tweens (body bob) and bobblehead lag (head bobs with slight delay)
 - **Projectile improvements**: All 4 projectile types sized up ~20% for visibility, each now has a subtle glow outline (lineStyle with 0.3 alpha)
 
+## Step 2: Design
+
+### New Files
+- `src/effects/ParticleManager.js` — Handles all particle effects: ambient motes, burst particles on events, player trail
+- `src/effects/ScreenEffects.js` — Screen shake, background pulse overlays (additive blend), hit freeze frames
+- `src/effects/TextEffects.js` — Floating score text (elastic scale), combo counter display, streak milestone announcements, near-miss indicators, entrance flavor text
+
+### Constants Added
+- `EFFECTS` section in Constants.js with 45+ configurable values covering: opening moment, ambient particles, action/hit particles, floating text, background pulse, player trail, screen shake intensities, combo system scaling, streak milestones, hit freeze, flash overlays, near-miss, Frame Mog burst, and game over screen
+
+### Opening Moment (First 3 Seconds)
+- Camera flash (300ms white) on scene start
+- Androgenic slides in from top (Power2 ease, 600ms)
+- Clavicular slams in from below (Bounce.easeOut, 800ms) with landing camera shake (0.012 intensity)
+- Landing particle burst (20 particles, neon gold/blue/purple)
+- "MOG OR BE MOGGED!" flavor text slams in (Back.easeOut) then fades
+- Ambient particles active from frame 1 (15 drifting motes in gold/blue/purple/pink, additive blend, sine-wave drift)
+- Neon floor glow pulsing continuously (additive blend, alpha 0.2-0.6)
+
+### Every-Action Effects
+- **SPECTACLE_HIT**: 16-particle burst at player position (gold/blue/green/pink)
+- **SPECTACLE_ACTION**: Throttled 4-particle burst on movement (every 200ms)
+- **SCORE_CHANGED**: Floating score text (+1 or +1 x3 for combos) with 1.8x start scale, Elastic.easeOut, 700ms rise and fade; background gold pulse (additive, alpha 0.15, 300ms); HUD score punch animation (1.3x scale yoyo)
+- **ATTACK_HIT**: Medium screen shake (0.012), red background pulse, 60ms physics freeze frame
+- **SPECTACLE_NEAR_MISS**: "CLOSE!" text popup, blue pulse, 10-particle burst
+- **Player trail**: Persistent particle emitter following player during movement (neon gold/blue/purple, additive blend, 40ms frequency, 350ms lifespan)
+
+### Combo & Streak System
+- **SPECTACLE_COMBO**: Combo counter text (32px base + 5px per combo), punch-scale animation on update; particles scale with combo count (12 + combo*2, capped at 30); shake scales (0.008 + combo*0.002, capped at 0.025); pink background pulse intensity scales
+- **COMBO_BREAK**: Combo counter fades out with scale-down animation
+- **SPECTACLE_STREAK (5x, 10x, 25x)**: Full-screen text slam ("FRAME CHECK!" / "MOG OR BE MOGGED!" / "ABSOLUTE MOGGER!") with glow layer (additive blend) + Back.easeOut; 40-particle explosion; heavy shake (0.020); camera flash; 90ms freeze frame
+
+### Frame Mog Enhancement
+- Glow text layer (additive blend, blur 30) behind main text
+- Slam-in with 1.4x overshoot, settle to 1.1x, then fade
+- 30-particle golden burst from player position
+- Heavy screen shake + gold background pulse + 120ms freeze frame
+
+### Death & Game Over Polish
+- **triggerGameOver**: Heavy shake (0.020), red camera flash (300ms)
+- **OUCH! text**: Now has elastic scale-in from 1.8x, larger font, depth-sorted
+- **GameOverScene entry**: White camera flash (250ms)
+- **Result text**: "YOU MOGGED HIM!" / "YOU GOT MOGGED!" now has glow layer (additive blend, pulsing alpha 0.24-0.6) + dramatic Back.easeOut scale-in from 0 to 1.15x then settle to 1x
+- **Score panel**: Enhanced with container-based scale-in (Back.easeOut, 500ms) + glow border
+- **Score value**: Gold glow shadow added
+- **Ambient particles on game over**: 12 floating motes drifting upward with gentle horizontal drift (neon colors, additive blend)
+
+### Design Audit Scores (all 4+)
+1. **Background**: 5/5 — Deep purple gradient, neon grid lines, pulsing floor glow
+2. **Palette**: 5/5 — Neon gold/blue/purple/pink accents on dark arena; consistent with looksmaxxing theme
+3. **Animations**: 5/5 — Breathing tweens, bobblehead lag, entrance sequence, collectible scale/fade
+4. **Particles**: 5/5 — Ambient motes, hit bursts, combo bursts, streaks, trail, Frame Mog explosion, game over floaters
+5. **Transitions**: 5/5 — Camera flash/fade, entrance sequence, game over scale-in
+6. **Typography**: 4/5 — Floating text with elastic scaling, glow layers on key text, combo counter scales with size
+7. **Game Feel**: 5/5 — Screen shake on every hit (scaled), freeze frames on damage/streaks, background pulse feedback
+8. **Game Over**: 5/5 — Flash entry, glow pulsing result text, panel scale-in, ambient particles
+9. **Character Prominence**: 5/5 — Photo-composite bobbleheads, player trail, expression reactions
+10. **First Impression / Viral Appeal**: 5/5 — First 3 seconds have flash, bounce-in, shake, particles, flavor text; zero static frames
+
 ## Decisions / Known Issues
 - Gravity set to 0 — projectiles use custom velocity for falling
 - No title screen — boots directly into gameplay

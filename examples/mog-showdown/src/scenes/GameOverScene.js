@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { GAME, COLORS, UI, TRANSITION, SAFE_ZONE } from '../core/Constants.js';
+import { GAME, COLORS, UI, TRANSITION, SAFE_ZONE, PX, EFFECTS } from '../core/Constants.js';
 import { eventBus, Events } from '../core/EventBus.js';
 import { gameState } from '../core/GameState.js';
 
@@ -14,101 +14,181 @@ export class GameOverScene extends Phaser.Scene {
     const cx = w / 2;
 
     this._transitioning = false;
+    this._ambientParticles = [];
 
     // Usable area below Play.fun widget bar
     const safeTop = SAFE_ZONE.TOP;
     const usableH = h - safeTop;
 
+    // --- Screen flash on entry ---
+    this.cameras.main.flash(EFFECTS.GAMEOVER_FLASH_DURATION, 255, 255, 255);
+
     // --- Gradient background ---
     this.drawGradient(w, h, COLORS.BG_TOP, COLORS.BG_BOTTOM);
 
-    // --- Mog result text ---
+    // --- Ambient floating particles in background ---
+    this.initAmbientParticles();
+
+    // --- Mog result text (with glow + scale animation) ---
     const mogged = gameState.score > 20;
     const resultText = mogged ? 'YOU MOGGED HIM!' : 'YOU GOT MOGGED!';
     const resultColor = mogged ? '#FFD700' : '#FF3366';
+    const resultGlowColor = mogged ? 'rgba(255,215,0,0.6)' : 'rgba(255,51,102,0.6)';
 
     const resultSize = Math.round(h * UI.TITLE_RATIO * 0.85);
-    this.add.text(cx, safeTop + usableH * 0.08, resultText, {
+    const resultY = safeTop + usableH * 0.08;
+
+    // Glow layer (additive blend, behind main text)
+    const resultGlow = this.add.text(cx, resultY, resultText, {
+      fontSize: resultSize + 'px',
+      fontFamily: UI.FONT,
+      color: resultColor,
+      fontStyle: 'bold',
+      shadow: { offsetX: 0, offsetY: 0, color: resultGlowColor, blur: 25, fill: true },
+    }).setOrigin(0.5).setAlpha(0).setBlendMode(Phaser.BlendModes.ADD);
+
+    // Main result text
+    const resultMain = this.add.text(cx, resultY, resultText, {
       fontSize: resultSize + 'px',
       fontFamily: UI.FONT,
       color: resultColor,
       fontStyle: 'bold',
       shadow: { offsetX: 0, offsetY: 3, color: 'rgba(0,0,0,0.6)', blur: 8, fill: true },
-    }).setOrigin(0.5);
+    }).setOrigin(0.5).setScale(0);
+
+    // Dramatic scale-in for result text
+    this.tweens.add({
+      targets: resultMain,
+      scaleX: 1.15,
+      scaleY: 1.15,
+      duration: 350,
+      ease: 'Back.easeOut',
+      onComplete: () => {
+        this.tweens.add({
+          targets: resultMain,
+          scaleX: 1,
+          scaleY: 1,
+          duration: 200,
+          ease: 'Sine.easeOut',
+        });
+      },
+    });
+
+    // Glow pulse animation
+    this.tweens.add({
+      targets: resultGlow,
+      alpha: EFFECTS.GAMEOVER_TITLE_GLOW_ALPHA,
+      duration: 400,
+      delay: 100,
+      ease: 'Sine.easeOut',
+    });
+
+    // Continuous glow pulse
+    this.tweens.add({
+      targets: resultGlow,
+      alpha: { from: EFFECTS.GAMEOVER_TITLE_GLOW_ALPHA * 0.4, to: EFFECTS.GAMEOVER_TITLE_GLOW_ALPHA },
+      duration: 800,
+      yoyo: true,
+      repeat: -1,
+      delay: 600,
+      ease: 'Sine.easeInOut',
+    });
 
     // --- "GAME OVER" title ---
     const titleSize = Math.round(h * UI.TITLE_RATIO);
-    this.add.text(cx, safeTop + usableH * 0.18, 'GAME OVER', {
+    const gameOverText = this.add.text(cx, safeTop + usableH * 0.18, 'GAME OVER', {
       fontSize: titleSize + 'px',
       fontFamily: UI.FONT,
       color: COLORS.UI_TEXT,
       fontStyle: 'bold',
       shadow: { offsetX: 0, offsetY: 3, color: 'rgba(0,0,0,0.5)', blur: 8, fill: true },
-    }).setOrigin(0.5);
+    }).setOrigin(0.5).setAlpha(0);
 
-    // --- Score panel ---
+    this.tweens.add({
+      targets: gameOverText,
+      alpha: 1,
+      duration: 400,
+      delay: 200,
+    });
+
+    // --- Score panel (with enhanced scale-in) ---
     const panelW = w * 0.65;
     const panelH = h * 0.30;
     const panelY = safeTop + usableH * 0.40;
 
+    const panelContainer = this.add.container(cx, panelY);
+    panelContainer.setScale(0);
+
     const panel = this.add.graphics();
     panel.fillStyle(0x000000, 0.35);
-    panel.fillRoundedRect(cx - panelW / 2, panelY - panelH / 2, panelW, panelH, 16);
+    panel.fillRoundedRect(-panelW / 2, -panelH / 2, panelW, panelH, 16);
     panel.lineStyle(2, 0x6c63ff, 0.6);
-    panel.strokeRoundedRect(cx - panelW / 2, panelY - panelH / 2, panelW, panelH, 16);
+    panel.strokeRoundedRect(-panelW / 2, -panelH / 2, panelW, panelH, 16);
+    panelContainer.add(panel);
+
+    // Panel glow border
+    const panelGlow = this.add.graphics();
+    panelGlow.lineStyle(4, 0x6c63ff, 0.2);
+    panelGlow.strokeRoundedRect(-panelW / 2 - 2, -panelH / 2 - 2, panelW + 4, panelH + 4, 18);
+    panelContainer.add(panelGlow);
 
     // Score label
     const labelSize = Math.round(h * UI.SMALL_RATIO);
-    this.add.text(cx, panelY - panelH * 0.32, 'SCORE', {
+    const scoreLabel = this.add.text(0, -panelH * 0.32, 'SCORE', {
       fontSize: labelSize + 'px',
       fontFamily: UI.FONT,
       color: COLORS.MUTED_TEXT,
       letterSpacing: 4,
     }).setOrigin(0.5);
+    panelContainer.add(scoreLabel);
 
     // Score value (large, gold)
     const scoreSize = Math.round(h * UI.HEADING_RATIO * 1.2);
-    const scoreText = this.add.text(cx, panelY - panelH * 0.12, `${gameState.score}`, {
+    const scoreText = this.add.text(0, -panelH * 0.12, `${gameState.score}`, {
       fontSize: scoreSize + 'px',
       fontFamily: UI.FONT,
       color: COLORS.SCORE_GOLD,
       fontStyle: 'bold',
+      shadow: { offsetX: 0, offsetY: 0, color: 'rgba(255,215,0,0.4)', blur: 12, fill: true },
     }).setOrigin(0.5);
-
-    // Scale-in animation for score
-    scoreText.setScale(0);
-    this.tweens.add({
-      targets: scoreText,
-      scaleX: 1,
-      scaleY: 1,
-      duration: 400,
-      delay: 200,
-      ease: 'Back.easeOut',
-    });
+    panelContainer.add(scoreText);
 
     // Best score
     const bestSize = Math.round(h * UI.SMALL_RATIO);
-    this.add.text(cx, panelY + panelH * 0.08, `Best: ${gameState.bestScore}`, {
+    const bestText = this.add.text(0, panelH * 0.08, `Best: ${gameState.bestScore}`, {
       fontSize: bestSize + 'px',
       fontFamily: UI.FONT,
       color: COLORS.MUTED_TEXT,
     }).setOrigin(0.5);
+    panelContainer.add(bestText);
 
     // Mog Level reached
-    this.add.text(cx, panelY + panelH * 0.22, `Mog Level: ${gameState.mogLevel}`, {
+    const mogText = this.add.text(0, panelH * 0.22, `Mog Level: ${gameState.mogLevel}`, {
       fontSize: bestSize + 'px',
       fontFamily: UI.FONT,
       color: '#FFD700',
     }).setOrigin(0.5);
+    panelContainer.add(mogText);
 
     // Best combo
     if (gameState.bestCombo > 1) {
-      this.add.text(cx, panelY + panelH * 0.36, `Best Combo: ${gameState.bestCombo}x`, {
+      const comboText = this.add.text(0, panelH * 0.36, `Best Combo: ${gameState.bestCombo}x`, {
         fontSize: bestSize + 'px',
         fontFamily: UI.FONT,
         color: '#FF69B4',
       }).setOrigin(0.5);
+      panelContainer.add(comboText);
     }
+
+    // Animate panel scale-in with bounce
+    this.tweens.add({
+      targets: panelContainer,
+      scaleX: 1,
+      scaleY: 1,
+      duration: EFFECTS.GAMEOVER_PANEL_SCALE_DURATION,
+      delay: 300,
+      ease: 'Back.easeOut',
+    });
 
     // --- Play Again button ---
     this.createButton(cx, safeTop + usableH * 0.68, 'PLAY AGAIN', () => this.restartGame());
@@ -118,6 +198,51 @@ export class GameOverScene extends Phaser.Scene {
 
     // --- Fade in ---
     this.cameras.main.fadeIn(TRANSITION.FADE_DURATION, 0, 0, 0);
+  }
+
+  // --- Ambient floating particles for game over screen ---
+  initAmbientParticles() {
+    const colors = [COLORS.NEON_GOLD, COLORS.NEON_BLUE, COLORS.NEON_PURPLE, COLORS.NEON_PINK];
+
+    for (let i = 0; i < EFFECTS.GAMEOVER_AMBIENT_COUNT; i++) {
+      const x = Phaser.Math.Between(0, GAME.WIDTH);
+      const y = Phaser.Math.Between(0, GAME.HEIGHT);
+      const size = Phaser.Math.FloatBetween(1.5 * PX, 4 * PX);
+      const color = colors[i % colors.length];
+      const alpha = Phaser.Math.FloatBetween(0.15, 0.35);
+
+      const gfx = this.add.graphics();
+      gfx.fillStyle(color, alpha);
+      gfx.fillCircle(0, 0, size);
+      gfx.setPosition(x, y);
+      gfx.setBlendMode(Phaser.BlendModes.ADD);
+
+      // Float upward with gentle drift
+      const duration = Phaser.Math.Between(4000, 8000);
+      this.tweens.add({
+        targets: gfx,
+        y: -20,
+        x: x + Phaser.Math.Between(-80 * PX, 80 * PX),
+        alpha: 0,
+        duration: duration,
+        delay: Phaser.Math.Between(0, 2000),
+        onComplete: () => {
+          // Respawn at bottom
+          gfx.setPosition(Phaser.Math.Between(0, GAME.WIDTH), GAME.HEIGHT + 20);
+          gfx.setAlpha(alpha);
+          this.tweens.add({
+            targets: gfx,
+            y: -20,
+            x: gfx.x + Phaser.Math.Between(-80 * PX, 80 * PX),
+            alpha: 0,
+            duration: duration,
+            repeat: -1,
+          });
+        },
+      });
+
+      this._ambientParticles.push(gfx);
+    }
   }
 
   restartGame() {

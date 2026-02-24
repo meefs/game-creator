@@ -229,3 +229,90 @@ export const UI = {
 export const TRANSITION = {
   FADE_DURATION: 350,
 };
+
+// --- Effects / Spectacle ---
+
+export const EFFECTS = {
+  // --- Opening Moment ---
+  ENTRANCE_FLASH_DURATION: 300,
+  ENTRANCE_PLAYER_SLAM_DURATION: 800,
+  ENTRANCE_PLAYER_SHAKE: 0.012,
+  ENTRANCE_PARTICLE_COUNT: 20,
+  ENTRANCE_ANDROGENIC_DURATION: 600,
+
+  // --- Ambient particles ---
+  AMBIENT_PARTICLE_COUNT: 15,         // Number of ambient motes active at any time
+  AMBIENT_PARTICLE_SPEED_MIN: 10 * PX,
+  AMBIENT_PARTICLE_SPEED_MAX: 30 * PX,
+  AMBIENT_PARTICLE_SIZE_MIN: 1.5 * PX,
+  AMBIENT_PARTICLE_SIZE_MAX: 4 * PX,
+  AMBIENT_PARTICLE_ALPHA: 0.35,
+  AMBIENT_PARTICLE_COLORS: [0xFFD700, 0x00BFFF, 0x8A2BE2, 0xFF1493],
+
+  // --- Action / Hit particles ---
+  ACTION_PARTICLE_COUNT: 12,
+  HIT_PARTICLE_COUNT: 16,
+  PARTICLE_SPEED_MIN: 80 * PX,
+  PARTICLE_SPEED_MAX: 220 * PX,
+  PARTICLE_LIFESPAN: 500,
+  PARTICLE_SIZE_MIN: 2 * PX,
+  PARTICLE_SIZE_MAX: 5 * PX,
+
+  // --- Floating score text ---
+  FLOAT_TEXT_SIZE: Math.round(_canvasH * 0.04),
+  FLOAT_TEXT_START_SCALE: 1.8,
+  FLOAT_TEXT_DURATION: 700,
+  FLOAT_TEXT_RISE: 50 * PX,
+
+  // --- Background pulse ---
+  BG_PULSE_ALPHA: 0.15,
+  BG_PULSE_DURATION: 300,
+  BG_PULSE_COLOR: 0xFFD700,
+
+  // --- Player trail ---
+  TRAIL_ALPHA: 0.4,
+  TRAIL_LIFESPAN: 350,
+  TRAIL_FREQUENCY: 40,         // ms between trail emissions
+  TRAIL_PARTICLE_SIZE: 3.5 * PX,
+
+  // --- Screen shake ---
+  SHAKE_LIGHT: 0.008,
+  SHAKE_MEDIUM: 0.012,
+  SHAKE_HEAVY: 0.020,
+  SHAKE_DURATION_SHORT: 120,
+  SHAKE_DURATION_MEDIUM: 200,
+  SHAKE_DURATION_LONG: 350,
+
+  // --- Combo system ---
+  COMBO_TEXT_BASE_SIZE: Math.round(_canvasH * 0.042),
+  COMBO_TEXT_SIZE_PER_COMBO: Math.round(_canvasH * 0.005),
+  COMBO_SHAKE_BASE: 0.008,
+  COMBO_SHAKE_PER_COMBO: 0.002,
+  COMBO_SHAKE_CAP: 0.025,
+
+  // --- Streak milestones ---
+  STREAK_MILESTONES: [5, 10, 25],
+  STREAK_PARTICLE_COUNT: 40,
+  STREAK_TEXT_SIZE: Math.round(_canvasH * 0.065),
+  STREAK_TEXT_DURATION: 1200,
+
+  // --- Hit freeze frame ---
+  HIT_FREEZE_DURATION: 60,
+
+  // --- Flash overlays ---
+  FLASH_ALPHA_LIGHT: 0.3,
+  FLASH_ALPHA_HEAVY: 0.5,
+
+  // --- Near miss ---
+  NEAR_MISS_PARTICLE_COUNT: 10,
+  NEAR_MISS_TEXT_SIZE: Math.round(_canvasH * 0.03),
+
+  // --- Frame Mog burst ---
+  FRAME_MOG_PARTICLE_COUNT: 30,
+
+  // --- Game Over ---
+  GAMEOVER_AMBIENT_COUNT: 12,
+  GAMEOVER_FLASH_DURATION: 250,
+  GAMEOVER_PANEL_SCALE_DURATION: 500,
+  GAMEOVER_TITLE_GLOW_ALPHA: 0.6,
+};
