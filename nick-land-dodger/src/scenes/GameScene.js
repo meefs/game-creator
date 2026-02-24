@@ -37,7 +37,7 @@ export class GameScene extends Phaser.Scene {
 
     // --- Collision: player vs bits ---
     this.physics.add.overlap(
-      this.player.sprite,
+      this.player.container,
       this.bitSpawner.group,
       this.onPlayerHit,
       null,
@@ -87,7 +87,8 @@ export class GameScene extends Phaser.Scene {
     });
 
     // --- Track bits that pass the player line for dodge/near-miss detection ---
-    this.dodgeCheckY = PLAYER.START_Y + PLAYER.HEIGHT / 2;
+    // The container origin is at the torso center; feet are roughly half the total height below
+    this.dodgeCheckY = PLAYER.START_Y + PLAYER.HEIGHT * 0.4;
 
     // --- Wire EventBus to player expressions ---
     this._onScoreChanged = () => {
@@ -142,7 +143,7 @@ export class GameScene extends Phaser.Scene {
    * Near-miss detection: bit x was within 20% of player width from player center.
    */
   checkDodgedBits() {
-    const playerX = this.player.sprite.x;
+    const playerX = this.player.container.x;
     const playerW = PLAYER.WIDTH;
     const nearMissRange = playerW * NEAR_MISS.THRESHOLD;
 
@@ -180,7 +181,7 @@ export class GameScene extends Phaser.Scene {
   /**
    * Called when player overlaps with a bit.
    */
-  onPlayerHit(playerSprite, bitContainer) {
+  onPlayerHit(playerContainer, bitContainer) {
     if (gameState.gameOver) return;
 
     // Find the bit object for this container

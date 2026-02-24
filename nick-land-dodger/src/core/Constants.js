@@ -47,20 +47,59 @@ export const SAFE_ZONE = {
   RIGHT: 0,
 };
 
+// --- Character Body (bobblehead proportions) ---
+const _U = GAME.WIDTH * 0.012;
+
+export const CHARACTER = {
+  U: _U,
+  // Torso
+  TORSO_H: _U * 5,
+  SHOULDER_W: _U * 7,
+  WAIST_W: _U * 5,
+  // Neck
+  NECK_W: _U * 2.5,
+  NECK_H: _U * 1,
+  // Head (photo-composite — dominates visually)
+  HEAD_H: _canvasH * 0.25,
+  FRAME_W: 200,
+  FRAME_H: 300,
+  // Arms
+  UPPER_ARM_W: _U * 1.8,
+  UPPER_ARM_H: _U * 3,
+  LOWER_ARM_W: _U * 1.6,
+  HAND_W: _U * 1.8,
+  HAND_H: _U * 1.5,
+  // Legs
+  LEG_W: _U * 2.4,
+  LEG_H: _U * 3,
+  LEG_GAP: _U * 1.2,
+  SHOE_W: _U * 3,
+  SHOE_H: _U * 1.2,
+  // Details
+  OUTLINE: Math.max(1, Math.round(_U * 0.3)),
+  BUTTON_R: _U * 0.3,
+  // Nick Land's colors (dark casual philosopher outfit)
+  SUIT: 0x1a1a2e,          // Dark navy sweater
+  SUIT_LIGHT: 0x282845,    // Lighter panel for depth
+  SHIRT: 0x333355,         // Visible dark shirt at collar
+  PANTS: 0x141428,         // Very dark pants
+  SHOES: 0x0a0a0f,         // Near-black shoes
+  SKIN: 0xd4c5a9,          // Pale skin (neck, hands)
+  EXPRESSION_HOLD: 1500,
+};
+
 // --- Player (Nick Land) ---
 
-const SPRITE_ASPECT = 1.5;
+// Total character height = head + body (torso + legs + shoes)
+const _bodyH = CHARACTER.TORSO_H + CHARACTER.LEG_H + CHARACTER.SHOE_H;
+const _totalCharH = CHARACTER.HEAD_H + CHARACTER.NECK_H + _bodyH;
 
 export const PLAYER = {
   START_X: GAME.WIDTH * 0.5,
-  START_Y: GAME.HEIGHT * 0.88,
-  WIDTH: GAME.WIDTH * 0.12,
-  HEIGHT: GAME.WIDTH * 0.12 * SPRITE_ASPECT,
+  START_Y: GAME.HEIGHT - _totalCharH * 0.52,
+  WIDTH: CHARACTER.SHOULDER_W * 2.2,
+  HEIGHT: _totalCharH,
   SPEED: 350 * PX,
-  COLOR: 0x1a1a2e,         // Dark cloak body
-  FACE_COLOR: 0xd4c5a9,    // Pale face
-  EYE_COLOR: 0x00ff88,     // Glowing green eyes
-  CLOAK_ACCENT: 0x2d1b4e,  // Deep purple accent on cloak
 };
 
 // --- Bits (falling obstacles) ---

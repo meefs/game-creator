@@ -34,12 +34,12 @@ window.render_game_to_text = () => {
 
   // Add player info when in gameplay
   const gameScene = game.scene.getScene('GameScene');
-  if (gameState.started && gameScene?.player?.sprite?.body) {
-    const s = gameScene.player.sprite;
-    const body = s.body;
+  if (gameState.started && gameScene?.player?.container?.body) {
+    const c = gameScene.player.container;
+    const body = c.body;
     payload.player = {
-      x: Math.round(s.x),
-      y: Math.round(s.y),
+      x: Math.round(c.x),
+      y: Math.round(c.y),
       vx: Math.round(body.velocity.x),
     };
   }
