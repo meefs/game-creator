@@ -215,6 +215,19 @@ If celebrities are detected:
 - **2D**: The Step 1.5 subagent will use photo-composite characters for these
 - **3D**: For each celebrity, try: (1) generate with Meshy AI — `"a cartoon caricature of <Name>, <distinguishing features>, low poly game character"` then rig for animation, (2) check `3d-character-library/manifest.json` for a pre-built match, (3) search Sketchfab with `find-3d-asset.mjs`, (4) fall back to best-matching library model. Meshy generation produces the best results for named personalities since it can capture specific visual features.
 
+**Meshy API Key (3D games only):**
+
+If the engine is 3D, check if `MESHY_API_KEY` is set in the environment. If not, **ask the user immediately in Step 0** — don't wait until Step 1.5:
+
+> I'll generate custom 3D models with Meshy AI for the best results. You can get a free API key in 30 seconds:
+> 1. Sign up at https://app.meshy.ai
+> 2. Go to Settings → API Keys
+> 3. Create a new API key
+>
+> What is your Meshy API key? (Or type "skip" to use generic model libraries instead)
+
+Store the key for all subsequent `meshy-generate.mjs` calls throughout the pipeline.
+
 Create all pipeline tasks upfront using `TaskCreate`:
 
 1. Scaffold game from template
@@ -563,45 +576,41 @@ Launch a `Task` subagent with these instructions:
 
 For 3D games, generate custom models with Meshy AI and integrate them as animated characters and world props. This is the 3D parallel of the 2D pixel art step above.
 
-**Pre-step: Get Meshy API Key**
+**Pre-step: Character & Asset Generation**
 
-Before starting 3D asset work, check if `MESHY_API_KEY` is set. If not, **ask the user**:
-
-> I'll generate custom 3D models with Meshy AI for the best results — characters that match your game's exact theme and style. You can get a free API key in 30 seconds:
-> 1. Sign up at https://app.meshy.ai
-> 2. Go to Settings → API Keys
-> 3. Create a new API key
->
-> What is your Meshy API key? (Or type "skip" to use generic model libraries instead)
-
-Store the key for all subsequent `meshy-generate.mjs` calls. If the user skips, use the fallback tiers below.
-
-**Pre-step: Character Generation**
+The Meshy API key should already be obtained in Step 0. If not set, ask now (see Step 0 instructions).
 
 1. **Read `design-brief.md`** to identify all characters (player + opponents/NPCs) and their names/descriptions.
 
-2. **For EACH character (player AND opponents), try these tiers in order:**
+2. **For EACH humanoid character, run the full generate→rig pipeline as ONE atomic step:**
 
-**Tier 1 — Generate with Meshy AI** (preferred): Generate a custom character model matching the game concept. Craft a descriptive prompt:
+**Tier 1 — Generate + Rig with Meshy AI** (preferred): This is a TWO-command chain — always run BOTH for humanoid characters. The rig step auto-downloads walk/run animation GLBs.
 ```bash
-# Generate the character model
+# Step A: Generate the character model
 MESHY_API_KEY=<key> node <plugin-root>/scripts/meshy-generate.mjs \
   --mode text-to-3d \
   --prompt "a stylized <character description>, low poly game character, full body" \
   --polycount 15000 --pbr \
   --output <project-dir>/public/assets/models/ --slug <character-slug>
 
-# Rig for animation (humanoid characters only)
-# Read the refineTaskId from the meta.json
+# Step B: Read the refineTaskId from meta, then rig immediately
+# The rig command auto-downloads walk/run GLBs as <slug>-walk.glb and <slug>-run.glb
+REFINE_ID=$(python3 -c "import json; print(json.load(open('<project-dir>/public/assets/models/<character-slug>.meta.json'))['refineTaskId'])")
 MESHY_API_KEY=<key> node <plugin-root>/scripts/meshy-generate.mjs \
-  --mode rig --task-id <refine-task-id> --height 1.7 \
-  --output <project-dir>/public/assets/models/ --slug <character-slug>-rigged
+  --mode rig --task-id $REFINE_ID --height 1.7 \
+  --output <project-dir>/public/assets/models/ --slug <character-slug>
 ```
-Rigging produces a GLB with basic walk/run animations. Log clip names to build the `clipMap`.
 
-For named personalities, be specific in the prompt: `"a cartoon caricature of Trump, blonde hair, suit, red tie, low poly game character, full body"`.
+After this completes you have 3 files per character:
+- `<slug>.glb` — rigged model with skeleton (use `loadAnimatedModel()` + `SkeletonUtils.clone()`)
+- `<slug>-walk.glb` — walking animation (auto-downloaded)
+- `<slug>-run.glb` — running animation (auto-downloaded)
 
-For multiple characters, generate each with a distinct description for visual variety.
+**NEVER generate humanoid characters without rigging.** Static models require hacky programmatic animation that looks artificial.
+
+For named personalities, be specific: `"a cartoon caricature of Trump, blonde hair, suit, red tie, low poly game character, full body"`.
+
+For multiple characters, generate each with a distinct description for visual variety. Run generate→rig in parallel for different characters to save time.
 
 **Tier 2 — Pre-built in `3d-character-library/`** (Meshy unavailable): Check `manifest.json` for a name/theme match. Copy the GLB:
 ```bash
@@ -660,28 +669,28 @@ node <plugin-root>/scripts/find-3d-asset.mjs --query "<entity description>" \
 >
 > **Read `progress.md`** at the project root before starting. It lists generated/downloaded models and the character details.
 >
-> **Character GLBs are already in** `public/assets/models/`. Set up the character controller:
+> **Rigged character GLBs + animation GLBs are already in** `public/assets/models/`. Set up the character controller:
 >
-> 1. Create `src/level/AssetLoader.js` — **CRITICAL: use `SkeletonUtils.clone()` for animated models** (regular `.clone()` breaks skeleton bindings → T-pose). Import from `three/addons/utils/SkeletonUtils.js`.
-> 2. Add `CHARACTER` config to `Constants.js` with: `path`, `scale`, `facingOffset`, `clipMap` (mapping `idle`/`walk`/`run` to actual clip names — these vary per model). For Meshy-rigged models, log clip names on first load to discover the correct names.
-> 3. Update `Player.js`:
->    - Use `THREE.Group` as position anchor
->    - Load model with `loadAnimatedModel()`, set up `AnimationMixer`
->    - Implement `fadeToAction()` pattern: `activeAction.fadeOut(0.3)` then `next.reset().setEffectiveTimeScale(1).setEffectiveWeight(1).fadeIn(0.3).play()`
->    - Camera-relative WASD: `inputVec.applyAxisAngle(UP, cameraAzimuth)`
->    - Model facing: `Math.atan2(v.x, v.z) + CHARACTER.facingOffset` (models face different directions)
->    - `model.quaternion.rotateTowards(targetQuat, turnSpeed * delta)` for smooth rotation
-> 4. Update `Game.js`:
->    - Add `OrbitControls` from `three/addons/controls/OrbitControls.js`
->    - Camera follows player: move both `orbitControls.target` and `camera.position` by player delta each frame
->    - Pass `orbitControls.getAzimuthalAngle()` to `Player.update()` for camera-relative movement
->    - Do NOT call `camera.lookAt()` — OrbitControls manages this
-> 5. Replace entity primitives with GLB models via `loadModel()` (static) or `loadAnimatedModel()` (animated)
-> 6. Add `ASSET_PATHS` and `MODEL_CONFIG` to Constants.js for each model
-> 7. Add `THREE.GridHelper` to ground for visible movement reference
-> 8. Add primitive fallback in `.catch()` for every model load
+> 1. Create `src/level/AssetLoader.js` — **CRITICAL: use `SkeletonUtils.clone()` for rigged models** (regular `.clone()` breaks skeleton bindings → T-pose). Import from `three/addons/utils/SkeletonUtils.js`.
+> 2. Add `MODELS` config to `Constants.js` with: `path` (rigged GLB), `walkPath`, `runPath`, `scale`, `rotationY` per model. **Start with `rotationY: Math.PI`** — most Meshy models face +Z and need flipping.
+> 3. For each rigged model:
+>    - Load with `loadAnimatedModel()`, create `AnimationMixer`
+>    - Load walk/run animation GLBs separately, register their clips as mixer actions
+>    - Log all clip names: `console.log('Clips:', clips.map(c => c.name))`
+>    - Store mixer and actions in entity's `userData`
+>    - Call `mixer.update(delta)` every frame
+>    - Use `fadeToAction()` pattern for smooth transitions
+> 4. For static models (ring, props): use `loadModel()` (regular clone)
+> 5. **Orientation & scale verification (MANDATORY):**
+>    - After loading each model, log its bounding box size
+>    - Compute auto-scale to fit target height and container bounds
+>    - Align feet to floor: `position.y = -box.min.y`
+>    - **Characters must face each other / the correct direction** — adjust `rotationY` in Constants
+>    - **Characters must fit inside their environment** (ring, arena, platform)
+>    - Position characters close enough to interact (punch range, not across the arena)
+> 6. Add primitive fallback in `.catch()` for every model load
 >
-> **After completing your work**, append a `## Step 1.5: 3D Assets` section to `progress.md` with: models used (Meshy-generated vs library), scale/orientation adjustments.
+> **After completing your work**, append a `## Step 1.5: 3D Assets` section to `progress.md` with: models used (Meshy-generated vs library), scale/orientation adjustments, verified facing directions.
 >
 > Do NOT run builds — the orchestrator handles verification.
 

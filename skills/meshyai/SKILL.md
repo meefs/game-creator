@@ -96,9 +96,9 @@ MESHY_API_KEY=<key> node scripts/meshy-generate.mjs \
   --slug hero
 ```
 
-### Auto-Rig (humanoids only)
+### Auto-Rig (humanoids only — MANDATORY for all bipedal characters)
 
-Adds a skeleton to a generated humanoid model. The input task ID comes from a completed text-to-3d or image-to-3d task.
+Adds a skeleton to a generated humanoid model and **auto-downloads walking + running animation GLBs**. The input task ID comes from a completed text-to-3d or image-to-3d task.
 
 ```bash
 MESHY_API_KEY=<key> node scripts/meshy-generate.mjs \
@@ -106,8 +106,15 @@ MESHY_API_KEY=<key> node scripts/meshy-generate.mjs \
   --task-id <meshy-task-id> \
   --height 1.8 \
   --output public/assets/models/ \
-  --slug hero-rigged
+  --slug hero
 ```
+
+This produces 3 files automatically:
+- `hero.glb` — rigged model with skeleton
+- `hero-walk.glb` — walking animation (auto-downloaded)
+- `hero-run.glb` — running animation (auto-downloaded)
+
+**Always chain generate → rig as one atomic step for humanoids.** Never leave humanoid characters as static models.
 
 **Limitations:** Rigging works only on textured humanoid (bipedal) models with clearly defined limbs. Won't work on animals, vehicles, abstract shapes, or untextured meshes.
 

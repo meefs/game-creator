@@ -482,8 +482,33 @@ async function rigModel() {
     modelPath = dest;
   }
 
-  // Also note basic animations that come with rigging
+  // Auto-download basic animations (walking + running GLBs)
   const basicAnims = rigResult.basic_animations || {};
+  const downloadedAnims = {};
+
+  if (basicAnims.walking_glb_url) {
+    const walkDest = join(outDir, `${fileSlug}-walk.glb`);
+    console.log(`  [meshy] Downloading walking animation...`);
+    try {
+      const size = await downloadFile(basicAnims.walking_glb_url, walkDest);
+      console.log(`  walk  → ${walkDest} (${formatBytes(size)})`);
+      downloadedAnims.walk = basename(walkDest);
+    } catch (err) {
+      console.log(`  [meshy] Walk download failed: ${err.message}`);
+    }
+  }
+
+  if (basicAnims.running_glb_url) {
+    const runDest = join(outDir, `${fileSlug}-run.glb`);
+    console.log(`  [meshy] Downloading running animation...`);
+    try {
+      const size = await downloadFile(basicAnims.running_glb_url, runDest);
+      console.log(`  run   → ${runDest} (${formatBytes(size)})`);
+      downloadedAnims.run = basename(runDest);
+    } catch (err) {
+      console.log(`  [meshy] Run download failed: ${err.message}`);
+    }
+  }
 
   writeMeta(join(outDir, `${fileSlug}.meta.json`), {
     slug: fileSlug,
@@ -494,20 +519,16 @@ async function rigModel() {
     heightMeters,
     result: rigResult,
     basicAnimations: basicAnims,
+    downloadedAnimations: downloadedAnims,
     modelPath: modelPath ? basename(modelPath) : null,
     createdAt: new Date().toISOString(),
   });
 
-  if (Object.keys(basicAnims).length > 0) {
-    console.log(`\n  Basic animations included:`);
-    for (const [name, url] of Object.entries(basicAnims)) {
-      console.log(`    ${name}: ${url}`);
-    }
-  }
-
-  console.log(`\n=== Done: ${modelPath || 'no GLB'} ===\n`);
-  console.log(`  To animate, run:`);
-  console.log(`  node scripts/meshy-generate.mjs --mode animate --task-id ${rigTaskId} --action-id <id> --slug ${fileSlug}-anim`);
+  console.log(`\n=== Done: ${modelPath || 'no GLB'} ===`);
+  if (downloadedAnims.walk) console.log(`  Walking: ${downloadedAnims.walk}`);
+  if (downloadedAnims.run) console.log(`  Running: ${downloadedAnims.run}`);
+  console.log(`\n  To add custom animations, run:`);
+  console.log(`  node scripts/meshy-generate.mjs --mode animate --task-id ${rigTaskId} --action-id <id> --slug ${fileSlug}-anim\n`);
 }
 
 // ---------------------------------------------------------------------------
