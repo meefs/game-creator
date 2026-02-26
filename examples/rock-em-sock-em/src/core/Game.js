@@ -4,12 +4,15 @@
 // Initializes renderer, scene, camera, and all systems.
 // Runs the animation loop. Manages robot creation and round resets.
 // Camera is fixed behind the player robot, looking at the opponent.
+//
+// On startup, preloads all GLB models before creating game entities.
 // =============================================================================
 
 import * as THREE from 'three';
-import { GAME, CAMERA, COLORS, PLAYER, OPPONENT, COMBAT } from './Constants.js';
+import { GAME, CAMERA, COLORS, PLAYER, OPPONENT, COMBAT, MODELS } from './Constants.js';
 import { eventBus, Events } from './EventBus.js';
 import { gameState } from './GameState.js';
+import { preloadAll } from '../level/AssetLoader.js';
 import { InputSystem } from '../systems/InputSystem.js';
 import { CombatSystem } from '../systems/CombatSystem.js';
 import { AISystem } from '../systems/AISystem.js';
@@ -62,6 +65,9 @@ export class Game {
     this.playerHealthBar = null;
     this.opponentHealthBar = null;
 
+    // --- Track async init ---
+    this.ready = false;
+
     // --- Events ---
     eventBus.on(Events.GAME_RESTART, () => this.restart());
     eventBus.on(Events.ROUND_WON, () => {
@@ -71,43 +77,70 @@ export class Game {
     // --- Resize ---
     window.addEventListener('resize', () => this.onResize());
 
-    // --- Auto-start (no title screen) ---
-    this.startGame();
+    // --- Render loop (starts immediately, but skips game logic until ready) ---
+    this.renderer.setAnimationLoop(() => this.animate());
+
+    // --- Preload models and start ---
+    this.init();
+  }
+
+  /**
+   * Preload all GLB assets, build the level, then start the game.
+   */
+  async init() {
+    try {
+      // Collect all model paths to preload
+      const modelPaths = Object.values(MODELS).map(m => m.path);
+
+      console.log('[Game] Preloading models:', modelPaths);
+      await preloadAll(modelPaths, (loaded, total) => {
+        console.log(`[Game] Loaded ${loaded}/${total} models`);
+      });
+    } catch (err) {
+      // Non-fatal — individual loadModel calls will also catch and fall back
+      console.warn('[Game] Some models failed to preload (primitives will be used):', err.message);
+    }
+
+    // Build the level (async for ring GLB loading)
+    await this.level.build();
+
+    // Start the game
+    await this.startGame();
+    this.ready = true;
 
     // Emit spectacle entrance
     eventBus.emit(Events.SPECTACLE_ENTRANCE, { game: 'rock-em-sock-em' });
-
-    // --- Render loop ---
-    this.renderer.setAnimationLoop(() => this.animate());
   }
 
-  startGame() {
+  async startGame() {
     gameState.reset();
     gameState.started = true;
 
-    this.createRobots();
+    await this.createRobots();
     this.input.setGameActive(true);
     this.ai.reset();
 
     eventBus.emit(Events.MUSIC_GAMEPLAY);
   }
 
-  createRobots() {
+  async createRobots() {
     // Clean up existing robots
     this.destroyRobots();
 
     // Player robot (Blue Bomber) — faces -Z (toward opponent)
-    this.playerRobot = createRobot(
+    this.playerRobot = await createRobot(
       { body: PLAYER.COLOR_BODY, dark: PLAYER.COLOR_DARK, glove: PLAYER.COLOR_GLOVE, accent: PLAYER.COLOR_ACCENT },
-      false // faces -Z
+      false, // faces -Z
+      'player'
     );
     this.playerRobot.position.set(0, 0.3, PLAYER.POSITION_Z);
     this.scene.add(this.playerRobot);
 
     // Opponent robot (Red Rocker) — faces +Z (toward player)
-    this.opponentRobot = createRobot(
+    this.opponentRobot = await createRobot(
       { body: OPPONENT.COLOR_BODY, dark: OPPONENT.COLOR_DARK, glove: OPPONENT.COLOR_GLOVE, accent: OPPONENT.COLOR_ACCENT },
-      true // faces +Z
+      true, // faces +Z
+      'opponent'
     );
     this.opponentRobot.position.set(0, 0.3, OPPONENT.POSITION_Z);
     this.scene.add(this.opponentRobot);
@@ -148,9 +181,9 @@ export class Game {
     }
   }
 
-  restart() {
+  async restart() {
     this.destroyRobots();
-    this.startGame();
+    await this.startGame();
   }
 
   animate() {
@@ -158,7 +191,7 @@ export class Game {
 
     this.input.update();
 
-    if (gameState.started && !gameState.gameOver) {
+    if (this.ready && gameState.started && !gameState.gameOver) {
       // --- Round reset timer ---
       if (gameState.roundOver && !gameState.gameOver) {
         gameState.roundResetTimer -= delta;

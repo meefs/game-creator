@@ -1,21 +1,28 @@
 // =============================================================================
 // LevelBuilder.js — Constructs the boxing ring and arena environment
 //
-// Boxing ring with platform, ropes, corner posts, and arena lighting.
+// Loads the boxing-ring.glb model. Falls back to procedural primitives
+// if the model fails to load. Lighting is always built procedurally.
 // =============================================================================
 
 import * as THREE from 'three';
-import { RING, COLORS } from '../core/Constants.js';
+import { RING, COLORS, MODELS } from '../core/Constants.js';
+import { loadModel } from './AssetLoader.js';
 
 export class LevelBuilder {
   constructor(scene) {
     this.scene = scene;
     this.meshes = [];
+    this.ringModel = null;
+  }
 
+  /**
+   * Build the full arena. Call after construction.
+   * Async because it attempts to load the boxing ring GLB.
+   */
+  async build() {
     this.buildFloor();
-    this.buildRingPlatform();
-    this.buildRopes();
-    this.buildCornerPosts();
+    await this.buildRing();
     this.buildLighting();
   }
 
@@ -30,12 +37,62 @@ export class LevelBuilder {
     this.meshes.push(floor);
   }
 
+  /**
+   * Load the boxing ring GLB or fall back to primitives.
+   */
+  async buildRing() {
+    let glbLoaded = false;
+
+    try {
+      const config = MODELS.BOXING_RING;
+      const model = await loadModel(config.path);
+
+      const scale = config.scale;
+      model.scale.set(scale, scale, scale);
+
+      // Force world matrix update so bounding box accounts for scale
+      model.updateMatrixWorld(true);
+
+      // Compute bounding box in world space (includes scale)
+      const box = new THREE.Box3().setFromObject(model);
+      const size = box.getSize(new THREE.Vector3());
+      const center = box.getCenter(new THREE.Vector3());
+
+      // Position the ring so its bottom sits at ground level
+      model.position.y = (config.positionY || 0) - box.min.y;
+      // Center on X/Z
+      model.position.x = -center.x;
+      model.position.z = -center.z;
+
+      model.traverse((child) => {
+        if (child.isMesh) {
+          child.castShadow = true;
+          child.receiveShadow = true;
+        }
+      });
+
+      this.scene.add(model);
+      this.ringModel = model;
+      glbLoaded = true;
+
+      console.log(`[LevelBuilder] Loaded ${config.path} — size: ${size.x.toFixed(2)} x ${size.y.toFixed(2)} x ${size.z.toFixed(2)}`);
+    } catch (err) {
+      console.warn('[LevelBuilder] Failed to load boxing-ring.glb, using primitive fallback:', err.message);
+    }
+
+    if (!glbLoaded) {
+      this.buildRingPlatform();
+      this.buildRopes();
+      this.buildCornerPosts();
+    }
+  }
+
+  // --- Primitive fallback methods (original implementation) ---
+
   buildRingPlatform() {
     // Raised platform
     const platformGeo = new THREE.BoxGeometry(
-      RING.PLATFORM_WIDTH,
-      RING.PLATFORM_HEIGHT,
-      RING.PLATFORM_DEPTH
+      RING.PLATFORM_WIDTH, RING.PLATFORM_HEIGHT, RING.PLATFORM_DEPTH
     );
     const platformMat = new THREE.MeshLambertMaterial({ color: RING.PLATFORM_COLOR });
     const platform = new THREE.Mesh(platformGeo, platformMat);
@@ -47,9 +104,7 @@ export class LevelBuilder {
 
     // Canvas (top surface)
     const canvasGeo = new THREE.BoxGeometry(
-      RING.PLATFORM_WIDTH - 0.1,
-      RING.CANVAS_HEIGHT,
-      RING.PLATFORM_DEPTH - 0.1
+      RING.PLATFORM_WIDTH - 0.1, RING.CANVAS_HEIGHT, RING.PLATFORM_DEPTH - 0.1
     );
     const canvasMat = new THREE.MeshLambertMaterial({ color: RING.CANVAS_COLOR });
     const canvas = new THREE.Mesh(canvasGeo, canvasMat);
@@ -58,7 +113,7 @@ export class LevelBuilder {
     this.scene.add(canvas);
     this.meshes.push(canvas);
 
-    // Ring apron (skirt around the platform)
+    // Ring apron (skirt)
     const apronMat = new THREE.MeshLambertMaterial({ color: 0x222244 });
     const sides = [
       { w: RING.PLATFORM_WIDTH, d: 0.05, x: 0, z: RING.PLATFORM_DEPTH / 2 },
@@ -88,7 +143,6 @@ export class LevelBuilder {
       [-halfW, halfD], [-halfW, -halfD],
     ];
 
-    // Turnbuckle caps (colored)
     const capGeo = new THREE.SphereGeometry(RING.POST_RADIUS * 1.8, 8, 8);
     const capColors = [0xcc2222, 0x2266cc, 0xcc2222, 0x2266cc];
 
@@ -99,7 +153,6 @@ export class LevelBuilder {
       this.scene.add(post);
       this.meshes.push(post);
 
-      // Cap
       const capMat = new THREE.MeshLambertMaterial({ color: capColors[i] });
       const cap = new THREE.Mesh(capGeo, capMat);
       cap.position.set(x, RING.PLATFORM_HEIGHT + RING.POST_HEIGHT + 0.05, z);
@@ -118,14 +171,11 @@ export class LevelBuilder {
     const halfD = RING.PLATFORM_DEPTH / 2 - 0.1;
     const heights = [RING.ROPE_HEIGHT_1, RING.ROPE_HEIGHT_2, RING.ROPE_HEIGHT_3];
 
-    // Horizontal ropes along each side
     const ropeSides = [
-      // Front and back (along X)
-      { length: RING.PLATFORM_WIDTH - 0.2, rotZ: 0, rotY: 0, x: 0, z: halfD },
-      { length: RING.PLATFORM_WIDTH - 0.2, rotZ: 0, rotY: 0, x: 0, z: -halfD },
-      // Left and right (along Z)
-      { length: RING.PLATFORM_DEPTH - 0.2, rotZ: 0, rotY: Math.PI / 2, x: halfW, z: 0 },
-      { length: RING.PLATFORM_DEPTH - 0.2, rotZ: 0, rotY: Math.PI / 2, x: -halfW, z: 0 },
+      { length: RING.PLATFORM_WIDTH - 0.2, rotY: 0, x: 0, z: halfD },
+      { length: RING.PLATFORM_WIDTH - 0.2, rotY: 0, x: 0, z: -halfD },
+      { length: RING.PLATFORM_DEPTH - 0.2, rotY: Math.PI / 2, x: halfW, z: 0 },
+      { length: RING.PLATFORM_DEPTH - 0.2, rotY: Math.PI / 2, x: -halfW, z: 0 },
     ];
 
     heights.forEach(h => {
@@ -182,6 +232,7 @@ export class LevelBuilder {
   }
 
   dispose() {
+    // Dispose primitive meshes
     this.meshes.forEach(mesh => {
       mesh.geometry.dispose();
       if (Array.isArray(mesh.material)) {
@@ -192,5 +243,21 @@ export class LevelBuilder {
       this.scene.remove(mesh);
     });
     this.meshes = [];
+
+    // Dispose GLB ring model
+    if (this.ringModel) {
+      this.ringModel.traverse((child) => {
+        if (child.isMesh) {
+          child.geometry.dispose();
+          if (Array.isArray(child.material)) {
+            child.material.forEach(m => m.dispose());
+          } else {
+            child.material.dispose();
+          }
+        }
+      });
+      this.scene.remove(this.ringModel);
+      this.ringModel = null;
+    }
   }
 }

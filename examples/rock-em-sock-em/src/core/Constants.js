@@ -172,6 +172,24 @@ export const HEALTH_BAR = {
   LOW_THRESHOLD: 0.3,        // Below 30% = red
 };
 
-// Not using external assets — robots built from primitives
+// --- 3D Model configuration ---
+export const MODELS = {
+  BLUE_BOMBER: {
+    path: 'assets/models/blue-bomber.glb',
+    scale: 1.0,
+    rotationY: 0,        // faces -Z by default (toward opponent)
+  },
+  RED_ROCKER: {
+    path: 'assets/models/red-rocker.glb',
+    scale: 1.0,
+    rotationY: Math.PI,  // flip to face +Z (toward player)
+  },
+  BOXING_RING: {
+    path: 'assets/models/boxing-ring.glb',
+    scale: 1.5,
+    positionY: 0,        // ground level
+  },
+};
+
 export const ASSET_PATHS = {};
 export const MODEL_CONFIG = {};
