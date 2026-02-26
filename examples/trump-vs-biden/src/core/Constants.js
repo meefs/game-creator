@@ -129,10 +129,78 @@ export const ASSET_PATHS = {
   BIDEN_MODEL: 'assets/models/biden.glb',
 };
 
+// Visual effects tuning
+export const EFFECTS = {
+  // Particles
+  HIT_PARTICLES: 18,
+  COMBO_PARTICLES: 25,
+  STREAK_PARTICLES: 40,
+  AMBIENT_PARTICLE_COUNT: 60,
+  PARTICLE_LIFE: 0.6,
+  PARTICLE_SIZE: 0.12,
+  TRAIL_SPAWN_INTERVAL: 0.03,
+  TRAIL_LIFE: 0.25,
+  TRAIL_SIZE: 0.08,
+
+  // Camera shake
+  CAMERA_SHAKE_HIT: 0.08,
+  CAMERA_SHAKE_DAMAGE: 0.18,
+  CAMERA_SHAKE_DURATION: 0.2,
+  CAMERA_SHAKE_STREAK: 0.25,
+
+  // Screen flash
+  FLASH_DURATION: 150,
+  FLASH_ALPHA: 0.3,
+  FLASH_DAMAGE_ALPHA: 0.4,
+  FLASH_DAMAGE_DURATION: 300,
+
+  // Opening
+  ENTRANCE_FLASH_DURATION: 300,
+  ENTRANCE_RISE_FROM_Y: -2,
+  ENTRANCE_RISE_DURATION: 800,
+
+  // Muzzle flash
+  MUZZLE_FLASH_INTENSITY: 2.0,
+  MUZZLE_FLASH_DURATION: 200,
+  MUZZLE_FLASH_DISTANCE: 3,
+
+  // Combo text
+  COMBO_TEXT_BASE_SIZE: 48,
+  COMBO_TEXT_GROW: 6,
+  COMBO_TEXT_MAX_SIZE: 80,
+  COMBO_FADE_DURATION: 500,
+
+  // Streak milestones
+  STREAK_MILESTONES: { 5: 'ON FIRE!', 10: 'UNSTOPPABLE!', 25: 'DOMINATION!' },
+  STREAK_TEXT_SIZE: 64,
+  STREAK_FADE_DURATION: 800,
+
+  // Arena glow pulse
+  GLOW_PULSE_PERIOD: 2.0,
+  GLOW_PULSE_MIN: 0.3,
+  GLOW_PULSE_MAX: 0.7,
+
+  // Game over slow-mo
+  SLOWMO_DURATION: 1.0,
+  SLOWMO_FACTOR: 0.2,
+  GAMEOVER_ZOOM_OFFSET: 2,
+  GAMEOVER_EXPLOSION_PARTICLES: 35,
+
+  // HUD shake on damage
+  HUD_SHAKE_DURATION: 300,
+  HUD_SHAKE_INTENSITY: 4,
+};
+
 // Per-model transforms
+// facingOffset: rotation to apply so the model faces the correct direction.
+// Trump geometry faces -Z by default (manifest facingOffset Math.PI means raw faces -Z).
+//   Trump is at Z=+5, needs to face -Z (toward Biden) → rotation.y = 0.
+// Biden geometry faces +Z by default (manifest facingOffset 0).
+//   Biden is at Z=-5, needs to face +Z (toward Trump) → rotation.y = 0.
+// Trump model is in centimeter scale (~184 units tall), needs 0.01 to be ~1.84m.
 export const MODEL_CONFIG = {
   trump: {
-    scale: 1,
+    scale: 0.01,
     offsetY: 0,
     facingOffset: Math.PI,
     clipMap: TRUMP_CLIPS,
@@ -140,7 +208,7 @@ export const MODEL_CONFIG = {
   biden: {
     scale: 1,
     offsetY: 0,
-    facingOffset: Math.PI,
+    facingOffset: 0,
     clipMap: BIDEN_CLIPS,
   },
 };
