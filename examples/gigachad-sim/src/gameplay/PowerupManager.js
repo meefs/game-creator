@@ -1,13 +1,14 @@
 // =============================================================================
 // PowerupManager.js — Protein shake powerups
-// Bright green cylinders with a glow that fall from above.
-// Collecting one grants a temporary 2x score multiplier.
+// Loads GLB model for the protein shake, with green glow sphere around it.
+// Falls back to primitive cylinder if model loading fails.
 // =============================================================================
 
 import * as THREE from 'three';
-import { POWERUP, ARENA, PLAYER } from '../core/Constants.js';
+import { POWERUP, ARENA, PLAYER, MODELS } from '../core/Constants.js';
 import { eventBus, Events } from '../core/EventBus.js';
 import { gameState } from '../core/GameState.js';
+import { loadModel } from '../level/AssetLoader.js';
 
 export class PowerupManager {
   constructor(scene) {
@@ -15,6 +16,39 @@ export class PowerupManager {
     this.activePowerups = [];
     this._cooldownTimer = POWERUP.SPAWN_INTERVAL;
     this._spawnTimer = 0;
+    this._glbTemplate = null;
+    this._modelReady = false;
+
+    this._loadGLBModel();
+  }
+
+  async _loadGLBModel() {
+    try {
+      const cfg = MODELS.POWERUP;
+      const model = await loadModel(cfg.path);
+
+      // Compute bounding box for debugging
+      const bbox = new THREE.Box3().setFromObject(model);
+      const size = new THREE.Vector3();
+      bbox.getSize(size);
+      console.log('Protein shake GLB bounding box:', size.x.toFixed(2), size.y.toFixed(2), size.z.toFixed(2));
+
+      // Auto-scale
+      model.scale.setScalar(cfg.scale);
+
+      // Center model vertically
+      const scaledBbox = new THREE.Box3().setFromObject(model);
+      const scaledSize = new THREE.Vector3();
+      scaledBbox.getSize(scaledSize);
+      model.position.y = -scaledBbox.min.y - scaledSize.y * 0.5;
+
+      this._glbTemplate = model;
+      this._modelReady = true;
+      console.log('Protein shake GLB loaded successfully');
+    } catch (err) {
+      console.warn('Protein shake GLB failed to load, using primitive fallback:', err.message);
+      this._modelReady = false;
+    }
   }
 
   update(delta, playerPos) {
@@ -73,30 +107,42 @@ export class PowerupManager {
   _spawnPowerup() {
     const group = new THREE.Group();
 
-    // Cylinder body (protein shake)
-    const bodyGeo = new THREE.CylinderGeometry(
-      POWERUP.RADIUS * 0.4,
-      POWERUP.RADIUS * 0.35,
-      POWERUP.RADIUS * 1.5,
-      8
-    );
-    const bodyMat = new THREE.MeshLambertMaterial({ color: POWERUP.COLOR });
-    const body = new THREE.Mesh(bodyGeo, bodyMat);
-    group.add(body);
+    if (this._modelReady && this._glbTemplate) {
+      // Clone the GLB model
+      const modelClone = this._glbTemplate.clone(true);
+      // Clone materials for per-instance changes
+      modelClone.traverse((c) => {
+        if (c.isMesh) {
+          c.material = c.material.clone();
+        }
+      });
+      group.add(modelClone);
+    } else {
+      // Primitive fallback: cylinder body (protein shake)
+      const bodyGeo = new THREE.CylinderGeometry(
+        POWERUP.RADIUS * 0.4,
+        POWERUP.RADIUS * 0.35,
+        POWERUP.RADIUS * 1.5,
+        8
+      );
+      const bodyMat = new THREE.MeshLambertMaterial({ color: POWERUP.COLOR });
+      const body = new THREE.Mesh(bodyGeo, bodyMat);
+      group.add(body);
 
-    // Cap
-    const capGeo = new THREE.CylinderGeometry(
-      POWERUP.RADIUS * 0.3,
-      POWERUP.RADIUS * 0.42,
-      POWERUP.RADIUS * 0.3,
-      8
-    );
-    const capMat = new THREE.MeshLambertMaterial({ color: 0xffffff });
-    const cap = new THREE.Mesh(capGeo, capMat);
-    cap.position.y = POWERUP.RADIUS * 0.9;
-    group.add(cap);
+      // Cap
+      const capGeo = new THREE.CylinderGeometry(
+        POWERUP.RADIUS * 0.3,
+        POWERUP.RADIUS * 0.42,
+        POWERUP.RADIUS * 0.3,
+        8
+      );
+      const capMat = new THREE.MeshLambertMaterial({ color: 0xffffff });
+      const cap = new THREE.Mesh(capGeo, capMat);
+      cap.position.y = POWERUP.RADIUS * 0.9;
+      group.add(cap);
+    }
 
-    // Glow sphere
+    // Glow sphere (added around both GLB and primitive versions)
     const glowGeo = new THREE.SphereGeometry(POWERUP.RADIUS * 1.2, 12, 8);
     const glowMat = new THREE.MeshBasicMaterial({
       color: POWERUP.GLOW_COLOR,
@@ -147,5 +193,14 @@ export class PowerupManager {
 
   destroy() {
     this.clearAll();
+    // Dispose GLB template
+    if (this._glbTemplate) {
+      this._glbTemplate.traverse((c) => {
+        if (c.isMesh) {
+          c.geometry.dispose();
+          if (c.material.dispose) c.material.dispose();
+        }
+      });
+    }
   }
 }

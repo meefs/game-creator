@@ -37,9 +37,39 @@ GigaChad Gym Simulator - endless gym workout simulator where GigaChad catches fa
 - Weights built from basic geometries (Step 2 will improve)
 
 ### TODOs for next steps
-- [ ] Step 2: Replace GigaChad with animated GLB model, replace weights with real 3D models
+- [x] Step 1.5: Replace primitives with Meshy AI GLB models
 - [ ] Step 3: Add particles (catch sparks, miss impact, combo fire), transitions, screen effects
 - [ ] Step 4: Record promo video
 - [ ] Step 5: Add BGM (gym beats) + SFX (catch clank, miss thud, powerup chime, flex grunt)
 - [ ] Step 6: Deploy to here.now
 - [ ] Step 7: Monetize with Play.fun
+
+## Step 1.5: 3D Assets (Complete)
+
+### Models used (all Meshy AI-generated)
+- **gigachad.glb** (1.6 MB) — Rigged character with skeleton, base pose
+- **gigachad-walk.glb** (1.6 MB) — Walking animation clip
+- **gigachad-run.glb** (1.6 MB) — Running animation clip
+- **barbell.glb** (1.7 MB) — Red barbell weight prop
+- **dumbbell.glb** (715 KB) — Blue dumbbell weight prop
+- **kettlebell.glb** (719 KB) — Gold kettlebell weight prop
+- **protein-shake.glb** (588 KB) — Green protein shake powerup
+
+### What was changed
+- **Constants.js** — Added `MODELS` config section with paths, scales, and rotation for all 7 GLB files
+- **Player.js** — Replaced primitive box character with rigged GLB model using `SkeletonUtils.clone()` via `loadAnimatedModel()`. Walk/run animations loaded from separate GLB files. `AnimationMixer` drives smooth `fadeToAction()` transitions between idle and walk states. Primitive box model retained as `.catch()` fallback
+- **WeightManager.js** — All 3 weight types (dumbbell, barbell, kettlebell) now load GLB models via `loadModel()`. Models are cloned per spawn with independent materials for opacity fading on catch. Primitive geometries retained as fallback
+- **PowerupManager.js** — Protein shake GLB loaded and cloned per spawn. Green glow sphere preserved around the model. Primitive cylinder fallback retained
+- **Game.js** — Added `preloadAll()` call before `startGame()` that loads all 7 GLB paths in parallel. Render loop starts immediately (gym environment visible during load). Game begins after preload completes (or gracefully falls back on failure)
+
+### Scale/orientation adjustments
+- GigaChad: scale 2.0, rotationY = Math.PI (Meshy models face +Z, flipped to face camera)
+- Weights: dumbbell 0.8, barbell 0.5, kettlebell 0.7 (scaled to match game proportions)
+- Protein shake: scale 0.8
+- All models auto-aligned to floor via bounding box calculation (`position.y = -bbox.min.y`)
+
+### Issues / Notes
+- Animation clip names from Meshy vary per model — clips logged to console on load for debugging
+- Walk/run clips loaded from separate GLB files (Meshy exports animations as separate files)
+- All model loads have `.catch()` fallback to original primitive geometries — game fully playable even if all GLBs fail to load
+- Materials cloned per instance for weight fade-out animation (opacity changes must be independent)

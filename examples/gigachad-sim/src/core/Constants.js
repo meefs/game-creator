@@ -119,6 +119,26 @@ export const CAMERA = {
   FOV: 60,
 };
 
+// 3D Models (all Meshy-generated GLBs)
+export const MODELS = {
+  GIGACHAD: {
+    path: '/assets/models/gigachad.glb',
+    walkPath: '/assets/models/gigachad-walk.glb',
+    runPath: '/assets/models/gigachad-run.glb',
+    scale: 2.0,           // fills ~40% of screen height
+    rotationY: Math.PI,   // Meshy models face +Z, flip to face camera
+  },
+  WEIGHTS: {
+    dumbbell: { path: '/assets/models/dumbbell.glb', scale: 0.8 },
+    barbell: { path: '/assets/models/barbell.glb', scale: 0.5 },
+    kettlebell: { path: '/assets/models/kettlebell.glb', scale: 0.7 },
+  },
+  POWERUP: {
+    path: '/assets/models/protein-shake.glb',
+    scale: 0.8,
+  },
+};
+
 // Touch input configuration
 export const TOUCH = {
   JOYSTICK_SIZE: 120,     // px

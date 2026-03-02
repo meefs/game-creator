@@ -1,11 +1,12 @@
 // =============================================================================
 // Game.js — Main orchestrator
 // Initializes all systems, manages the render loop, wires up EventBus.
+// Preloads all GLB models before starting gameplay.
 // Third-person camera behind and above GigaChad, fixed position.
 // =============================================================================
 
 import * as THREE from 'three';
-import { GAME, CAMERA, COLORS, ARENA } from './Constants.js';
+import { GAME, CAMERA, COLORS, ARENA, MODELS } from './Constants.js';
 import { eventBus, Events } from './EventBus.js';
 import { gameState } from './GameState.js';
 import { InputSystem } from '../systems/InputSystem.js';
@@ -14,6 +15,7 @@ import { WeightManager } from '../gameplay/WeightManager.js';
 import { PowerupManager } from '../gameplay/PowerupManager.js';
 import { LevelBuilder } from '../level/LevelBuilder.js';
 import { Menu } from '../ui/Menu.js';
+import { preloadAll } from '../level/AssetLoader.js';
 
 export class Game {
   constructor() {
@@ -70,11 +72,38 @@ export class Game {
     // Resize
     window.addEventListener('resize', () => this.onResize());
 
-    // Auto-start (no title screen — Play.fun handles chrome)
-    this.startGame();
+    // Preload all models, then start the game
+    this._preloadAndStart();
 
-    // Start render loop
+    // Start render loop immediately (scene renders even during loading)
     this.renderer.setAnimationLoop(() => this.animate());
+  }
+
+  async _preloadAndStart() {
+    // Collect all model paths to preload
+    const paths = [
+      MODELS.GIGACHAD.path,
+      MODELS.GIGACHAD.walkPath,
+      MODELS.GIGACHAD.runPath,
+      MODELS.WEIGHTS.dumbbell.path,
+      MODELS.WEIGHTS.barbell.path,
+      MODELS.WEIGHTS.kettlebell.path,
+      MODELS.POWERUP.path,
+    ];
+
+    console.log(`Preloading ${paths.length} GLB models...`);
+
+    try {
+      await preloadAll(paths, (loaded, total) => {
+        console.log(`Models loaded: ${loaded}/${total}`);
+      });
+      console.log('All models preloaded successfully');
+    } catch (err) {
+      console.warn('Some models failed to preload (game will use fallbacks):', err.message);
+    }
+
+    // Start game after preloading (or after failure — fallbacks will handle it)
+    this.startGame();
   }
 
   startGame() {

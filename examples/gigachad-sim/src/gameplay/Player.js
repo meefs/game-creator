@@ -1,14 +1,14 @@
 // =============================================================================
 // Player.js — GigaChad character
-// Large imposing figure: broad shoulders, small head, massive arms.
-// Built from primitives (wide torso, thick limbs, skin tone + dark hair).
-// Entrance animation: slides in from off-screen with a bounce.
+// Loads rigged GLB model with walk/run animations via SkeletonUtils.clone().
+// Falls back to primitive box model if GLB loading fails.
 // =============================================================================
 
 import * as THREE from 'three';
-import { PLAYER, ARENA, SPECTACLE } from '../core/Constants.js';
+import { PLAYER, ARENA, SPECTACLE, MODELS } from '../core/Constants.js';
 import { eventBus, Events } from '../core/EventBus.js';
 import { gameState } from '../core/GameState.js';
+import { loadAnimatedModel } from '../level/AssetLoader.js';
 
 const _tmpVec = new THREE.Vector3();
 
@@ -19,7 +19,11 @@ export class Player {
     this.mesh.position.set(PLAYER.START_X, PLAYER.START_Y, PLAYER.ENTRANCE_START_Z);
     this.scene.add(this.mesh);
 
-    this._buildModel();
+    // Animation state
+    this._mixer = null;
+    this._actions = {};    // { idle: Action, walk: Action, run: Action }
+    this._activeAction = null;
+    this._modelLoaded = false;
 
     // Entrance animation state
     this._entranceTime = 0;
@@ -37,32 +41,123 @@ export class Player {
     this._popTimer = 0;
     this._baseScale = 1;
 
+    // Primitive arm refs (only used in fallback)
+    this.leftArm = null;
+    this.rightArm = null;
+    this._armRestRotZ = 0;
+    this._armLiftRotZ = -Math.PI * 0.35;
+    this._armFlexRotZ = -Math.PI * 0.55;
+
+    // Try loading GLB model, fall back to primitives
+    this._loadGLBModel().catch((err) => {
+      console.warn('GigaChad GLB failed to load, using primitive fallback:', err.message);
+      this._buildPrimitiveModel();
+    });
+
     // Emit entrance event
     eventBus.emit(Events.SPECTACLE_ENTRANCE);
   }
 
-  _buildModel() {
-    // GigaChad is built from box/cylinder primitives
-    // Proportions: very wide torso, thick arms, small head, massive overall
+  async _loadGLBModel() {
+    const cfg = MODELS.GIGACHAD;
 
+    // Load main model (has skeleton + possibly idle animation)
+    const { model, clips } = await loadAnimatedModel(cfg.path);
+    console.log('GigaChad base clips:', clips.map(c => c.name));
+
+    // Compute bounding box to determine model size
+    const bbox = new THREE.Box3().setFromObject(model);
+    const size = new THREE.Vector3();
+    bbox.getSize(size);
+    console.log('GigaChad bounding box size:', size.x.toFixed(2), size.y.toFixed(2), size.z.toFixed(2));
+
+    // Scale model to target height (~PLAYER.HEIGHT)
+    const targetHeight = PLAYER.HEIGHT;
+    const currentHeight = size.y;
+    const scaleFactor = (targetHeight / currentHeight) * cfg.scale;
+    model.scale.setScalar(scaleFactor);
+
+    // Recompute bounding box after scaling for floor alignment
+    const scaledBbox = new THREE.Box3().setFromObject(model);
+    // Align feet to floor: shift up so bounding box min.y = 0
+    model.position.y = -scaledBbox.min.y;
+
+    // Face the camera (Meshy models typically face +Z)
+    model.rotation.y = cfg.rotationY;
+
+    this.mesh.add(model);
+    this._glbModel = model;
+
+    // Set up animation mixer
+    this._mixer = new THREE.AnimationMixer(model);
+
+    // Collect all clips from the base model (may contain idle/T-pose)
+    const allClips = [...clips];
+
+    // Load walk animation from separate GLB
+    try {
+      const walkData = await loadAnimatedModel(cfg.walkPath);
+      console.log('GigaChad walk clips:', walkData.clips.map(c => c.name));
+      allClips.push(...walkData.clips.map(c => {
+        c.name = 'walk_' + c.name;
+        return c;
+      }));
+
+      // Use the first clip from the walk file as the walk action
+      if (walkData.clips.length > 0) {
+        const walkAction = this._mixer.clipAction(walkData.clips[0]);
+        this._actions.walk = walkAction;
+      }
+    } catch (err) {
+      console.warn('Walk animation failed to load:', err.message);
+    }
+
+    // Load run animation from separate GLB
+    try {
+      const runData = await loadAnimatedModel(cfg.runPath);
+      console.log('GigaChad run clips:', runData.clips.map(c => c.name));
+
+      if (runData.clips.length > 0) {
+        const runAction = this._mixer.clipAction(runData.clips[0]);
+        this._actions.run = runAction;
+      }
+    } catch (err) {
+      console.warn('Run animation failed to load:', err.message);
+    }
+
+    // Use base model clips for idle (first clip if available)
+    if (clips.length > 0) {
+      const idleAction = this._mixer.clipAction(clips[0]);
+      this._actions.idle = idleAction;
+      // Start with idle
+      idleAction.play();
+      this._activeAction = idleAction;
+    }
+
+    this._modelLoaded = true;
+    console.log('GigaChad GLB model loaded successfully. Actions:', Object.keys(this._actions));
+  }
+
+  _buildPrimitiveModel() {
+    // GigaChad is built from box/cylinder primitives (fallback)
     const skinMat = new THREE.MeshLambertMaterial({ color: PLAYER.SKIN_COLOR });
     const hairMat = new THREE.MeshLambertMaterial({ color: PLAYER.HAIR_COLOR });
     const shortsMat = new THREE.MeshLambertMaterial({ color: PLAYER.SHORTS_COLOR });
     const shoeMat = new THREE.MeshLambertMaterial({ color: PLAYER.SHOE_COLOR });
 
-    // Torso — wide and thick
+    // Torso
     const torsoGeo = new THREE.BoxGeometry(PLAYER.WIDTH * 0.8, PLAYER.HEIGHT * 0.35, PLAYER.DEPTH);
     const torso = new THREE.Mesh(torsoGeo, skinMat);
     torso.position.y = PLAYER.HEIGHT * 0.55;
     this.mesh.add(torso);
 
-    // Chest (slightly wider at top)
+    // Chest
     const chestGeo = new THREE.BoxGeometry(PLAYER.WIDTH * 0.85, PLAYER.HEIGHT * 0.15, PLAYER.DEPTH * 1.1);
     const chest = new THREE.Mesh(chestGeo, skinMat);
     chest.position.y = PLAYER.HEIGHT * 0.7;
     this.mesh.add(chest);
 
-    // Head — small relative to body (the GigaChad look)
+    // Head
     const headGeo = new THREE.BoxGeometry(PLAYER.WIDTH * 0.25, PLAYER.HEIGHT * 0.15, PLAYER.DEPTH * 0.7);
     const head = new THREE.Mesh(headGeo, skinMat);
     head.position.y = PLAYER.HEIGHT * 0.88;
@@ -74,7 +169,7 @@ export class Player {
     hair.position.y = PLAYER.HEIGHT * 0.96;
     this.mesh.add(hair);
 
-    // Left arm — thick
+    // Left arm
     this.leftArm = new THREE.Group();
     const upperArmGeo = new THREE.BoxGeometry(PLAYER.WIDTH * 0.2, PLAYER.HEIGHT * 0.25, PLAYER.DEPTH * 0.6);
     const leftUpper = new THREE.Mesh(upperArmGeo, skinMat);
@@ -87,7 +182,7 @@ export class Player {
     this.leftArm.position.set(-PLAYER.WIDTH * 0.55, PLAYER.HEIGHT * 0.65, 0);
     this.mesh.add(this.leftArm);
 
-    // Right arm — thick
+    // Right arm
     this.rightArm = new THREE.Group();
     const rightUpper = new THREE.Mesh(upperArmGeo.clone(), skinMat);
     rightUpper.position.y = -PLAYER.HEIGHT * 0.1;
@@ -108,7 +203,7 @@ export class Player {
     rightLeg.position.set(PLAYER.WIDTH * 0.2, PLAYER.HEIGHT * 0.2, 0);
     this.mesh.add(rightLeg);
 
-    // Lower legs (skin)
+    // Lower legs
     const lowerLegGeo = new THREE.BoxGeometry(PLAYER.WIDTH * 0.2, PLAYER.HEIGHT * 0.15, PLAYER.DEPTH * 0.55);
     const leftLower = new THREE.Mesh(lowerLegGeo, skinMat);
     leftLower.position.set(-PLAYER.WIDTH * 0.2, PLAYER.HEIGHT * 0.07, 0);
@@ -127,14 +222,32 @@ export class Player {
     const rightShoe = new THREE.Mesh(shoeGeo.clone(), shoeMat);
     rightShoe.position.set(PLAYER.WIDTH * 0.2, PLAYER.HEIGHT * 0.02, 0);
     this.mesh.add(rightShoe);
+  }
 
-    // Store arm rest rotations
-    this._armRestRotZ = 0;
-    this._armLiftRotZ = -Math.PI * 0.35; // arms up for lifting pose
-    this._armFlexRotZ = -Math.PI * 0.55; // arms up and bent for flex
+  /**
+   * Smooth transition between animation actions (fadeToAction pattern).
+   */
+  _fadeToAction(name, duration = 0.3) {
+    if (!this._actions[name] || this._activeAction === this._actions[name]) return;
+
+    const next = this._actions[name];
+    if (this._activeAction) {
+      this._activeAction.fadeOut(duration);
+    }
+    next.reset()
+      .setEffectiveTimeScale(1)
+      .setEffectiveWeight(1)
+      .fadeIn(duration)
+      .play();
+    this._activeAction = next;
   }
 
   update(delta, input) {
+    // Update animation mixer
+    if (this._mixer) {
+      this._mixer.update(delta);
+    }
+
     // Entrance animation
     if (this._isEntering) {
       this._entranceTime += delta;
@@ -159,6 +272,8 @@ export class Player {
     }
 
     // Movement — left/right only
+    const isMoving = !gameState.gameOver && Math.abs(input.moveX) > 0.1;
+
     if (!gameState.gameOver) {
       const moveAmount = input.moveX * PLAYER.SPEED * delta;
       this.mesh.position.x += moveAmount;
@@ -167,7 +282,7 @@ export class Player {
       const halfBound = ARENA.HALF_WIDTH - PLAYER.WIDTH * 0.5;
       this.mesh.position.x = Math.max(-halfBound, Math.min(halfBound, this.mesh.position.x));
 
-      if (Math.abs(input.moveX) > 0.1) {
+      if (isMoving) {
         eventBus.emit(Events.PLAYER_MOVE, { x: this.mesh.position.x });
         eventBus.emit(Events.SPECTACLE_ACTION);
       }
@@ -178,6 +293,17 @@ export class Player {
         input.consumeFlex();
         eventBus.emit(Events.PLAYER_FLEX);
         eventBus.emit(Events.SPECTACLE_ACTION);
+      }
+    }
+
+    // Animation transitions (GLB model)
+    if (this._modelLoaded && this._mixer) {
+      if (isMoving) {
+        // Switch to walk animation when moving
+        this._fadeToAction('walk');
+      } else {
+        // Switch back to idle when stationary
+        this._fadeToAction('idle');
       }
     }
 
@@ -208,8 +334,10 @@ export class Player {
       this.mesh.scale.setScalar(this._baseScale);
     }
 
-    // Arm animations
-    this._updateArms(delta);
+    // Arm animations (primitive fallback only)
+    if (!this._modelLoaded) {
+      this._updateArms(delta);
+    }
   }
 
   _updateArms(delta) {
@@ -255,9 +383,20 @@ export class Player {
     this._isFlexing = false;
     this.mesh.scale.setScalar(1);
     gameState.entranceDone = true;
+
+    // Reset animation to idle
+    if (this._modelLoaded && this._actions.idle) {
+      this._fadeToAction('idle', 0.1);
+    }
   }
 
   destroy() {
+    // Stop mixer
+    if (this._mixer) {
+      this._mixer.stopAllAction();
+      this._mixer = null;
+    }
+
     this.mesh.traverse((c) => {
       if (c.isMesh) {
         c.geometry.dispose();

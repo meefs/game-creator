@@ -1,14 +1,14 @@
 // =============================================================================
 // WeightManager.js — Spawns and manages falling weights
-// Weights fall from above. Player positions under them to auto-catch.
-// Types: dumbbell (small/blue), barbell (large/red), kettlebell (gold).
-// Difficulty ramps speed and frequency over time.
+// Loads GLB models for each weight type (dumbbell, barbell, kettlebell).
+// Falls back to primitive geometries if model loading fails.
 // =============================================================================
 
 import * as THREE from 'three';
-import { WEIGHTS, ARENA, DIFFICULTY, PLAYER, SPECTACLE } from '../core/Constants.js';
+import { WEIGHTS, ARENA, DIFFICULTY, PLAYER, SPECTACLE, MODELS } from '../core/Constants.js';
 import { eventBus, Events } from '../core/EventBus.js';
 import { gameState } from '../core/GameState.js';
+import { loadModel } from '../level/AssetLoader.js';
 
 export class WeightManager {
   constructor(scene) {
@@ -16,13 +16,50 @@ export class WeightManager {
     this.activeWeights = [];
     this._geometries = new Map();
     this._materials = new Map();
+    this._glbTemplates = new Map();  // loaded GLB templates keyed by weight name
+    this._modelsReady = false;
 
     this._prepareGeometries();
+    this._loadGLBModels();
+  }
+
+  async _loadGLBModels() {
+    const weightConfigs = MODELS.WEIGHTS;
+
+    for (const wType of WEIGHTS.TYPES) {
+      const cfg = weightConfigs[wType.name];
+      if (!cfg) continue;
+
+      try {
+        const model = await loadModel(cfg.path);
+
+        // Compute bounding box for debugging and scaling
+        const bbox = new THREE.Box3().setFromObject(model);
+        const size = new THREE.Vector3();
+        bbox.getSize(size);
+        console.log(`${wType.name} GLB bounding box:`, size.x.toFixed(2), size.y.toFixed(2), size.z.toFixed(2));
+
+        // Auto-scale based on config
+        model.scale.setScalar(cfg.scale);
+
+        // Center the model vertically
+        const scaledBbox = new THREE.Box3().setFromObject(model);
+        const scaledSize = new THREE.Vector3();
+        scaledBbox.getSize(scaledSize);
+        model.position.y = -scaledBbox.min.y - scaledSize.y * 0.5;
+
+        this._glbTemplates.set(wType.name, model);
+        console.log(`${wType.name} GLB loaded successfully`);
+      } catch (err) {
+        console.warn(`${wType.name} GLB failed to load, using primitive fallback:`, err.message);
+      }
+    }
+
+    this._modelsReady = true;
   }
 
   _prepareGeometries() {
-    // Dumbbell: two spheres connected by a cylinder
-    // We approximate with a horizontal capsule shape
+    // Primitive fallback geometries
     for (const wType of WEIGHTS.TYPES) {
       const group = new THREE.Group();
       const s = wType.scale;
@@ -30,12 +67,10 @@ export class WeightManager {
       this._materials.set(wType.name, mat);
 
       if (wType.name === 'dumbbell') {
-        // Bar
         const barGeo = new THREE.CylinderGeometry(s * 0.08, s * 0.08, s * 1.0, 8);
         const bar = new THREE.Mesh(barGeo, mat);
         bar.rotation.z = Math.PI / 2;
         group.add(bar);
-        // End plates
         const plateGeo = new THREE.CylinderGeometry(s * 0.25, s * 0.25, s * 0.15, 8);
         const leftPlate = new THREE.Mesh(plateGeo, mat);
         leftPlate.rotation.z = Math.PI / 2;
@@ -46,7 +81,6 @@ export class WeightManager {
         rightPlate.position.x = s * 0.5;
         group.add(rightPlate);
       } else if (wType.name === 'barbell') {
-        // Long bar with big plates
         const barGeo = new THREE.CylinderGeometry(s * 0.06, s * 0.06, s * 1.8, 8);
         const bar = new THREE.Mesh(barGeo, mat);
         bar.rotation.z = Math.PI / 2;
@@ -59,7 +93,6 @@ export class WeightManager {
           group.add(plate);
         }
       } else if (wType.name === 'kettlebell') {
-        // Ball body + handle
         const bodyGeo = new THREE.SphereGeometry(s * 0.3, 12, 8);
         const body = new THREE.Mesh(bodyGeo, mat);
         group.add(body);
@@ -109,6 +142,7 @@ export class WeightManager {
 
       // Gentle rotation for visual interest
       w.group.rotation.z += delta * 0.5;
+      w.group.rotation.y += delta * 0.8;
 
       // Check auto-catch: weight is at catch height and player is close
       if (w.group.position.y <= WEIGHTS.CATCH_Y_THRESHOLD && !w.caught) {
@@ -148,8 +182,22 @@ export class WeightManager {
     const typeIdx = this._pickWeightType();
     const wType = WEIGHTS.TYPES[typeIdx];
 
-    // Clone the template geometry group
-    const group = this._geometries.get(wType.name).clone(true);
+    let group;
+
+    // Try to use GLB model if available
+    const glbTemplate = this._glbTemplates.get(wType.name);
+    if (glbTemplate) {
+      group = glbTemplate.clone(true);
+      // Clone materials so opacity changes per-instance
+      group.traverse((c) => {
+        if (c.isMesh) {
+          c.material = c.material.clone();
+        }
+      });
+    } else {
+      // Primitive fallback
+      group = this._geometries.get(wType.name).clone(true);
+    }
 
     // Random X position within arena
     const x = (Math.random() - 0.5) * (ARENA.WIDTH - 2);
@@ -169,7 +217,6 @@ export class WeightManager {
   }
 
   _pickWeightType() {
-    // At low difficulty, mostly dumbbells. At high, more barbells and kettlebells.
     const r = Math.random();
     const d = gameState.difficulty / DIFFICULTY.MAX_LEVEL;
 
@@ -238,7 +285,7 @@ export class WeightManager {
 
   destroy() {
     this.clearAll();
-    // Dispose template geometries
+    // Dispose template geometries (primitives)
     this._geometries.forEach((group) => {
       group.traverse((c) => {
         if (c.isMesh) {
@@ -247,5 +294,14 @@ export class WeightManager {
       });
     });
     this._materials.forEach((mat) => mat.dispose());
+    // Dispose GLB templates
+    this._glbTemplates.forEach((model) => {
+      model.traverse((c) => {
+        if (c.isMesh) {
+          c.geometry.dispose();
+          if (c.material.dispose) c.material.dispose();
+        }
+      });
+    });
   }
 }
