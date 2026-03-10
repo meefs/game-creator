@@ -48,11 +48,21 @@ When the game-creator pipeline runs, **ask the user for a reference image first*
 
 ## Environment Variable
 
-```bash
-export WORLDLABS_API_KEY=<your-key>
-```
+Before prompting the user, check if the key already exists:
+`test -f .env && grep -q WORLDLABS_API_KEY .env && echo "found"`
+If found, load it with `source .env` and skip the prompt.
 
-Get an API key at: https://platform.worldlabs.ai/api-keys
+If not set, ask the user:
+
+> I'll generate a photorealistic 3D environment with World Labs. You can get a free API key:
+> 1. Sign up at https://platform.worldlabs.ai
+> 2. Go to API Keys
+> 3. Create a new key
+>
+> Paste your key below like: `WORLDLABS_API_KEY=your-key-here`
+> (It will be saved to .env and redacted from this conversation automatically.)
+>
+> Or type "skip" to use basic geometry instead.
 
 ## CLI Script Usage
 

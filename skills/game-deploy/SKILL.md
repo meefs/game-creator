@@ -62,10 +62,16 @@ Without an API key, publishes are **anonymous and expire in 24 hours**. The publ
 
 To set up an API key for permanent hosting (skip the 24h window entirely):
 
+First check if the key already exists:
+`test -f .env && grep -q HERENOW_API_KEY .env && echo "found"`
+If found, load it with `source .env` and skip the prompt.
+
+Otherwise:
 1. Ask the user for their email
 2. Send a magic link: `curl -sS https://here.now/api/auth/login -H "content-type: application/json" -d '{"email": "user@example.com"}'`
 3. User clicks the link, copies their API key from the dashboard
-4. Save the key: `mkdir -p ~/.herenow && echo "<API_KEY>" > ~/.herenow/credentials && chmod 600 ~/.herenow/credentials`
+4. User pastes the key like: `HERENOW_API_KEY=their-key-here` (saved to .env and redacted automatically)
+5. Also save to credentials file: `mkdir -p ~/.herenow && grep HERENOW_API_KEY .env | cut -d= -f2 > ~/.herenow/credentials && chmod 600 ~/.herenow/credentials`
 
 ### Updating a deploy
 

@@ -27,14 +27,21 @@ First, load the game-3d-assets skill and the meshyai skill for the full model pi
 
 ### Step 1: Get Meshy API Key
 
-Check if `MESHY_API_KEY` is set. If not, ask the user:
+Check if `MESHY_API_KEY` is set. First check `.env`:
+`test -f .env && grep -q MESHY_API_KEY .env && echo "found"`
+If found, load it with `source .env` and skip the prompt.
+
+If not set, ask the user:
 
 > I'll generate custom 3D models with Meshy AI for the best results. You can get a free API key in 30 seconds:
 > 1. Sign up at https://app.meshy.ai
 > 2. Go to Settings → API Keys
 > 3. Create a new API key
 >
-> What is your Meshy API key? (Or type "skip" to use free model libraries instead)
+> Paste your key below like: `MESHY_API_KEY=your-key-here`
+> (It will be saved to .env and redacted from this conversation automatically.)
+>
+> Or type "skip" to use free model libraries instead.
 
 ### Step 2: Audit
 
