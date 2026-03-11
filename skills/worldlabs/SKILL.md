@@ -49,7 +49,7 @@ When the game-creator pipeline runs, **ask the user for a reference image first*
 ## Environment Variable
 
 Before prompting the user, check if the key already exists:
-`test -f .env && grep -q WORLDLABS_API_KEY .env && echo "found"`
+`test -f .env && grep -q '^WORLDLABS_API_KEY=.' .env && echo "found"`
 If found, export it with `set -a; . .env; set +a` and skip the prompt.
 
 If not set, ask the user:

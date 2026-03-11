@@ -86,7 +86,7 @@ Parse `$ARGUMENTS` to determine the game concept. Arguments can take two forms:
 
 #### 3D API Keys
 
-For 3D games, check for these API keys — first in `.env` (`test -f .env && grep -q KEY_NAME .env`), then in the environment:
+For 3D games, check for these API keys — first in `.env` (`test -f .env && grep -q '^KEY_NAME=.' .env`), then in the environment:
 - **`MESHY_API_KEY`** — for generating custom 3D character/prop models with Meshy AI (see [tweet-pipeline.md](tweet-pipeline.md) for the prompt flow)
 - **`WLT_API_KEY`** / **`WORLDLABS_API_KEY`** — for generating photorealistic 3D environments with World Labs Gaussian Splats. If not set, ask the user alongside `MESHY_API_KEY`:
   > I can also generate a **photorealistic 3D environment** with World Labs. Paste your key like: `WORLDLABS_API_KEY=your-key-here` — or type "skip" to use basic geometry.

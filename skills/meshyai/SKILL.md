@@ -52,7 +52,7 @@ If `MESHY_API_KEY` is not available and the user declines to set one up, fall ba
 All Meshy API calls require `MESHY_API_KEY`. **Always check for this key before starting any 3D asset work.**
 
 Before prompting the user, check if the key already exists:
-`test -f .env && grep -q MESHY_API_KEY .env && echo "found"`
+`test -f .env && grep -q '^MESHY_API_KEY=.' .env && echo "found"`
 If found, export it with `set -a; . .env; set +a` and skip the prompt.
 
 If the key is not set in the environment or `.env`, **ask the user immediately**:

@@ -63,7 +63,7 @@ Without an API key, publishes are **anonymous and expire in 24 hours**. The publ
 To set up an API key for permanent hosting (skip the 24h window entirely):
 
 First check if the key already exists:
-`test -f .env && grep -q HERENOW_API_KEY .env && echo "found"`
+`test -f .env && grep -q '^HERENOW_API_KEY=.' .env && echo "found"`
 If found, export it with `set -a; . .env; set +a` and skip the prompt.
 
 Otherwise:

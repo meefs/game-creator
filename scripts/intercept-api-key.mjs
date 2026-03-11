@@ -37,6 +37,11 @@ const PREFIX_MAP = {
 // Placeholder values from skill prompt examples — never save these
 const PLACEHOLDER_RE = /^(your|their|my)[-_]?key[-_]?here$|^<.*>$|^replace[-_]?me$|^xxx+$|^test[-_]?key$/i;
 
+// Strip trailing punctuation from captured values (e.g. "abc123." → "abc123")
+function cleanValue(val) {
+  return val.replace(/[.,;:!?)]+$/, '');
+}
+
 // ── Helpers ───────────────────────────────────────────────────
 
 function findProjectRoot(cwd) {
@@ -103,8 +108,9 @@ async function main() {
   let match;
   EXPLICIT_RE.lastIndex = 0;
   while ((match = EXPLICIT_RE.exec(prompt)) !== null) {
-    const [, key, value] = match;
-    if (PLACEHOLDER_RE.test(value)) continue;
+    const [, key, rawValue] = match;
+    const value = cleanValue(rawValue);
+    if (!value || PLACEHOLDER_RE.test(value)) continue;
     try {
       upsertEnv(envPath, key, value);
       saved.push(key);

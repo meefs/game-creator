@@ -28,7 +28,7 @@ First, load the game-3d-assets skill and the meshyai skill for the full model pi
 ### Step 1: Get Meshy API Key
 
 Check if `MESHY_API_KEY` is set. First check `.env`:
-`test -f .env && grep -q MESHY_API_KEY .env && echo "found"`
+`test -f .env && grep -q '^MESHY_API_KEY=.' .env && echo "found"`
 If found, export it with `set -a; . .env; set +a` and skip the prompt.
 
 If not set, ask the user:

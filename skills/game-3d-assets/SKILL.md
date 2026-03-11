@@ -31,7 +31,7 @@ Primitive cubes and spheres are fast to scaffold, but players can't tell a house
 ### Meshy API Key
 
 Meshy AI is the **preferred source for all 3D assets**. Before prompting the user, check if the key already exists:
-`test -f .env && grep -q MESHY_API_KEY .env && echo "found"`
+`test -f .env && grep -q '^MESHY_API_KEY=.' .env && echo "found"`
 If found, export it with `set -a; . .env; set +a` and skip the prompt.
 
 If `MESHY_API_KEY` is not set, **ask the user before falling back to other tiers**:
@@ -147,7 +147,7 @@ node scripts/find-3d-asset.mjs --query "<character name> animated character" --m
 ## Sketchfab Token (Tier 3 fallback)
 
 Only needed if falling back to Sketchfab. Search is free but **download requires `SKETCHFAB_TOKEN`**. Before prompting, check if the key already exists:
-`test -f .env && grep -q SKETCHFAB_TOKEN .env && echo "found"`
+`test -f .env && grep -q '^SKETCHFAB_TOKEN=.' .env && echo "found"`
 If found, export it with `set -a; . .env; set +a` and skip the prompt.
 
 If needed and not set, ask the user:
