@@ -30,14 +30,21 @@ Primitive cubes and spheres are fast to scaffold, but players can't tell a house
 
 ### Meshy API Key
 
-Meshy AI is the **preferred source for all 3D assets**. If `MESHY_API_KEY` is not set, **ask the user before falling back to other tiers**:
+Meshy AI is the **preferred source for all 3D assets**. Before prompting the user, check if the key already exists:
+`test -f .env && grep -q '^MESHY_API_KEY=.' .env && echo "found"`
+If found, export it with `set -a; . .env; set +a` and skip the prompt.
+
+If `MESHY_API_KEY` is not set, **ask the user before falling back to other tiers**:
 
 > I'd like to generate custom 3D models with Meshy AI for the best results. You can get a free API key:
 > 1. Sign up at https://app.meshy.ai
 > 2. Go to Settings → API Keys
 > 3. Create a new API key
 >
-> What is your Meshy API key? (Or type "skip" to use free model libraries instead)
+> Paste your key below like: `MESHY_API_KEY=your-key-here`
+> (It will be saved to .env and redacted from this conversation automatically.)
+>
+> Or type "skip" to use free model libraries instead.
 
 If the user provides a key, use it for all `meshy-generate.mjs` calls. If they skip, fall through to Tier 2+.
 
@@ -139,16 +146,21 @@ node scripts/find-3d-asset.mjs --query "<character name> animated character" --m
 
 ## Sketchfab Token (Tier 3 fallback)
 
-Only needed if falling back to Sketchfab. Search is free but **download requires `SKETCHFAB_TOKEN`**. If needed and not set, ask the user:
+Only needed if falling back to Sketchfab. Search is free but **download requires `SKETCHFAB_TOKEN`**. Before prompting, check if the key already exists:
+`test -f .env && grep -q '^SKETCHFAB_TOKEN=.' .env && echo "found"`
+If found, export it with `set -a; . .env; set +a` and skip the prompt.
+
+If needed and not set, ask the user:
 
 > I need a Sketchfab API token to download this model. You can get one for free:
 > 1. Sign in at https://sketchfab.com
 > 2. Go to https://sketchfab.com/settings/password → "API Token"
 > 3. Copy the token
 >
-> What is your Sketchfab API token?
+> Paste your token below like: `SKETCHFAB_TOKEN=your-token-here`
+> (It will be saved to .env and redacted from this conversation automatically.)
 
-Then pass it as: `SKETCHFAB_TOKEN=<token> node scripts/find-3d-asset.mjs ...`
+Then use it via: `set -a; . .env; set +a && node scripts/find-3d-asset.mjs ...`
 
 ## Search & Download Script
 

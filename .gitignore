@@ -22,5 +22,9 @@ test-*.png
 # Gallery build artifacts
 gallery/thumbnails/
 
+# API keys (managed by intercept hook)
+.env
+.env.local
+
 # Deployment artifacts
 .herenow/

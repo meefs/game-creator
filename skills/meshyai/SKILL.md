@@ -49,16 +49,25 @@ If `MESHY_API_KEY` is not available and the user declines to set one up, fall ba
 
 ## Authentication
 
-All Meshy API calls require `MESHY_API_KEY`. **Always check for this key before starting any 3D asset work.** If the key is not set in the environment, **ask the user immediately**:
+All Meshy API calls require `MESHY_API_KEY`. **Always check for this key before starting any 3D asset work.**
+
+Before prompting the user, check if the key already exists:
+`test -f .env && grep -q '^MESHY_API_KEY=.' .env && echo "found"`
+If found, export it with `set -a; . .env; set +a` and skip the prompt.
+
+If the key is not set in the environment or `.env`, **ask the user immediately**:
 
 > I'll generate custom 3D models with Meshy AI for the best results. You can get a free API key in 30 seconds:
 > 1. Sign up at https://app.meshy.ai
 > 2. Go to Settings → API Keys
 > 3. Create a new API key
 >
-> What is your Meshy API key? (Or type "skip" to use free model libraries instead)
+> Paste your key below like: `MESHY_API_KEY=your-key-here`
+> (It will be saved to .env and redacted from this conversation automatically.)
+>
+> Or type "skip" to use free model libraries instead.
 
-If the user provides a key, use it via: `MESHY_API_KEY=<key> node scripts/meshy-generate.mjs ...`
+If the user provides a key, use it via: `set -a; . .env; set +a && node scripts/meshy-generate.mjs ...`
 
 If the user skips, proceed with fallback sources (character library → Sketchfab → Poly Haven).
 
