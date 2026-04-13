@@ -206,3 +206,13 @@ The SDK is non-blocking — if it fails to load, the game still works. Points bu
 ## License
 
 MIT (games using `@strudel/web` for audio must use an AGPL-3.0-compatible license)
+
+## Star History
+
+<a href="https://www.star-history.com/?repos=OpusGameLabs%2Fgame-creator&type=date&legend=top-left">
+ <picture>
+   <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/chart?repos=OpusGameLabs/game-creator&type=date&theme=dark&legend=top-left" />
+   <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/chart?repos=OpusGameLabs/game-creator&type=date&legend=top-left" />
+   <img alt="Star History Chart" src="https://api.star-history.com/chart?repos=OpusGameLabs/game-creator&type=date&legend=top-left" />
+ </picture>
+</a>
