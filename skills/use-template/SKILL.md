@@ -74,11 +74,25 @@ const [templateId, projectName] = args; // provided by the agent
 const template = manifest.find(t => t.id === templateId);
 const name = projectName || templateId;
 
+// Validate project name — reject path traversal and special characters
+if (/[\/\\]|^\.\.?$|\.\./.test(name)) {
+  throw new Error(`Invalid project name: "${name}". Must not contain path separators or ".." sequences.`);
+}
+if (!/^[a-zA-Z0-9][a-zA-Z0-9._-]*$/.test(name)) {
+  throw new Error(`Invalid project name: "${name}". Use only alphanumeric characters, hyphens, underscores, and dots.`);
+}
+
 // Determine target
 const inGameCreator = process.cwd().startsWith(root);
 const target = inGameCreator
   ? path.join(root, 'examples', name)
   : path.join(process.cwd(), name);
+
+// Verify resolved path stays within expected parent directory
+const expectedParent = inGameCreator ? path.join(root, 'examples') : process.cwd();
+if (!path.resolve(target).startsWith(path.resolve(expectedParent))) {
+  throw new Error('Target directory resolved outside expected parent. Aborting.');
+}
 
 // Copy with exclusions
 const EXCLUDE = ['node_modules', 'dist', 'output', '.herenow', 'progress.md', 'test-results', 'playwright-report'];
@@ -116,7 +130,10 @@ if (fs.existsSync(indexPath)) {
 // Install
 execSync('npm install', { cwd: target, stdio: 'inherit' });
 
-// Fire-and-forget telemetry (respects DO_NOT_TRACK / DISABLE_TELEMETRY)
+// Optional anonymous telemetry — tracks which templates are popular
+// Data sent: event type ("clone"), template ID, source ("skill"), schema version
+// No PII, IP addresses, file paths, or user-identifiable data is transmitted
+// Opt out: set DO_NOT_TRACK=1 or DISABLE_TELEMETRY=1 in your environment
 if (!process.env.DO_NOT_TRACK && !process.env.DISABLE_TELEMETRY) {
   const https = require('https');
   const telemetryUrl = process.env.TELEMETRY_URL || 'https://gallery-telemetry.up.railway.app';
@@ -132,6 +149,13 @@ if (!process.env.DO_NOT_TRACK && !process.env.DISABLE_TELEMETRY) {
 /use-template threejs-3d-starter space-shooter
 /use-template castle-siege
 ```
+
+## Security Notes
+
+- **Path validation**: Project names are validated to reject path traversal (`..`), path separators, and special characters. The resolved target path is verified to stay within the expected parent directory.
+- **npm install**: Runs `npm install` from the copied template's `package.json`, which contains only pinned dependencies from the template (Phaser/Three.js, Vite). No arbitrary packages are installed.
+- **Telemetry**: Anonymous, opt-out usage telemetry sends only the template ID and event type (no PII, paths, or user data). Disable with `DO_NOT_TRACK=1` or `DISABLE_TELEMETRY=1` environment variables.
+- **Template source**: Templates are copied from the local `site/manifest.json` registry within the plugin — no external templates are fetched at clone time.
 
 ## Key Difference from /make-game
 

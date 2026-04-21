@@ -436,6 +436,13 @@ node scripts/find-3d-asset.mjs --query "barrel" --source polyhaven --output publ
 **Cause:** Manual camera position updates conflict with OrbitControls trying to maintain its own camera state.
 **Fix:** Don't set `camera.position` directly when using OrbitControls. Instead, update `controls.target` to follow the player, and let OrbitControls manage the camera position relative to the target. Call `controls.update()` once per frame in the animation loop.
 
+## Security Notes
+
+- **Third-party model downloads**: Models downloaded from Sketchfab, Poly Haven, and Poly.pizza are binary GLB/GLTF files (3D geometry, textures, animations). They are not executable code and cannot perform arbitrary actions. Three.js's GLTFLoader parses only valid glTF data structures.
+- **Meshy AI API**: Meshy generates models server-side from text/image prompts. The API key is stored in a local `.env` file and passed only to the Meshy API. Generated models are downloaded as GLB binaries.
+- **API key storage**: All API keys (`MESHY_API_KEY`, `SKETCHFAB_TOKEN`) are stored in the project's `.env` file (which should be gitignored) and loaded via environment variables. Keys are never embedded in game source code or deployed artifacts.
+- **Content scope**: Downloaded models are used only as visual assets rendered by Three.js. No text content from third-party sources is interpreted as instructions or commands.
+
 ## Checklist
 
 - [ ] `AssetLoader.js` uses `SkeletonUtils.clone()` for animated models

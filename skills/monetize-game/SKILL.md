@@ -143,25 +143,24 @@ Integrate the SDK into the game. This is a lightweight addition — the SDK load
 
 #### 4a. Add the SDK script and meta tag to `index.html`
 
-First, extract the user's API key from stored credentials:
+Retrieve the user's Play.fun **public API key** from stored credentials:
 
 ```bash
-# Read API key from agent config (stored by playfun-auth.js)
-# Example path for Claude Code — adapt for your agent
-API_KEY=$(cat ~/.claude.json | jq -r '.mcpServers["play-fun"].headers["x-api-key"]')
-echo "User API Key: $API_KEY"
+node skills/playdotfun/scripts/playfun-auth.js get-key
 ```
 
-If no API key is found, prompt the user to authenticate first (Step 1).
+The script prints only the public API key to stdout. If no key is found, prompt the user to authenticate first (Step 1).
 
-Then add before the closing `</head>` tag, substituting the actual API key:
+> **Security note**: The `x-ogp-key` is a **public client identifier** — analogous to a Stripe publishable key or Firebase API key. It is designed to be embedded in client-side HTML and does not grant write access, authentication, or any privileged operations. The secret key (used for server-side API calls) is never embedded in game files.
+
+Then add before the closing `</head>` tag:
 
 ```html
-<meta name="x-ogp-key" content="<USER_API_KEY>" />
+<meta name="x-ogp-key" content="<PUBLIC_API_KEY>" />
 <script src="https://sdk.play.fun/latest"></script>
 ```
 
-**Important**: The `x-ogp-key` meta tag must contain the **user's Play.fun API key** (not the game ID). Do NOT leave the placeholder `USER_API_KEY_HERE` — always substitute the actual key extracted above.
+**Important**: The `x-ogp-key` meta tag must contain the **user's Play.fun public API key** (not the game ID or secret key). Do NOT leave the placeholder — always substitute the actual key from `playfun-auth.js get-key`.
 
 #### 4b. Create `src/playfun.js` integration module
 
@@ -342,3 +341,11 @@ Result: Auth with Play.fun → registers game with anti-cheat limits (maxScorePe
 ### API key not found
 **Cause:** Credentials not configured or expired since last session.
 **Fix:** Visit https://play.fun/dashboard to refresh creator credentials. Re-run the auth flow with `playfun-auth.js` or manually update the `.env` file with fresh `PLAYFUN_API_KEY` and `PLAYFUN_SECRET_KEY` values.
+
+## Security Notes
+
+- **Public API key in HTML**: The `x-ogp-key` meta tag contains a public client identifier, not a secret. It is equivalent to a Stripe publishable key or Firebase web API key — designed for client-side use, safe to deploy publicly. It cannot be used to modify game data, access user accounts, or perform privileged operations.
+- **Secret key handling**: The Play.fun secret key (used for server-side API registration) is only used during the `register_game` API call and is never written to game source files or deployed artifacts.
+- **Credential storage**: Credentials are managed by `playfun-auth.js` in a local credential store. The agent never reads internal agent configuration files (e.g., `~/.claude.json`).
+- **Financial operations**: All wallet-connect and reward-claiming operations are initiated by the end player through the Play.fun SDK UI. The game developer's code does not handle funds, private keys, or wallet operations — the SDK mediates all financial interactions client-side.
+- **Deployment**: Only the public API key and game ID are present in deployed files. No secrets are included in build artifacts.

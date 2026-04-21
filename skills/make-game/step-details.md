@@ -239,7 +239,7 @@ cp <plugin-root>/assets/characters/characters/<slug>/sprites/* \
 ```
 Result: 4-expression spritesheet ready. Done.
 
-**Tier 2 — Build from 4 images (good)**: WebSearch for 4 expression photos. **Any photo format works** (jpg, png, webp) — the pipeline has ML background removal built in, so transparent PNGs are NOT required. Search broadly:
+**Tier 2 — Build from 4 images (good)**: WebSearch for 4 expression photos (binary image files only — no text content is interpreted from downloaded images). **Any photo format works** (jpg, png, webp) — the pipeline has ML background removal built in, so transparent PNGs are NOT required. Search broadly:
 - normal: `"<Name> portrait photo"` or `"<Name> face"` — neutral expression
 - happy: `"<Name> smiling"` or `"<Name> laughing"`
 - angry: `"<Name> angry"` or `"<Name> serious stern"`
