@@ -9,7 +9,7 @@
   },
   "dependencies": {
     "three": "^0.183.0",
-    "@sparkjsdev/spark": "latest"
+    "@sparkjsdev/spark": "^2.0.0"
   },
   "devDependencies": {
     "vite": "^7.3.1"
