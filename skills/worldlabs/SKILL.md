@@ -113,6 +113,8 @@ npm install @sparkjsdev/spark@^2.0.0
 
 **Package**: `@sparkjsdev/spark` — high-performance Gaussian Splat renderer for Three.js. Pin to `^2.0.0`; the 0.x line has a different API (no `SparkRenderer`) and will not match the snippets below. Supports SPZ, PLY, SOGS, KSPLAT, SPLAT formats (auto-detected by extension).
 
+**Three.js peer version**: Spark 2.0 declares `three@^0.180.0` as its peer dependency. Three treats every 0.x minor as potentially breaking, so `three@^0.181` or newer triggers an `ERESOLVE` peer-dep error on `npm install`. Pin `three` to `^0.180.0` in your project's `package.json` — this is what the `threejs-3d` template and the `worldlabs-arcade` example both use.
+
 **No bundler?** Use the CDN importmap instead of npm:
 
 ```html
