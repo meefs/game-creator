@@ -35,6 +35,7 @@ skills/
   record-promo/SKILL.md    # Record autonomous promo video (standalone command)
   monetize-game/SKILL.md   # Play.fun monetization (register, SDK, redeploy)
   qa-game/SKILL.md         # Add Playwright QA tests
+  sub-games/SKILL.md       # Sub.games community platform for finding players and supporters
   review-game/SKILL.md     # Code review for architecture + best practices
 templates/
   phaser-2d/               # Runnable 2D starter project (Phaser 3)
@@ -136,6 +137,7 @@ tests/
 ### Audio integration
 
 Audio requires user interaction to start (browser autoplay policy). The flow:
+
 1. GameScene first input → `AUDIO_INIT` event → AudioContext created/resumed
 2. GameScene `startPlaying()` → `MUSIC_GAMEPLAY` → gameplay BGM
 3. Bird dies → `BIRD_DIED` (death SFX) + `MUSIC_STOP`
@@ -147,11 +149,11 @@ BGM uses a Web Audio API step sequencer. SFX use one-shot OscillatorNodes. All a
 
 ## Dependencies
 
-| Package | Version | Purpose |
-|---------|---------|---------|
-| phaser | ^3.90.0 | 2D game engine (Phaser template) |
-| three | ^0.183.0 | 3D game engine (Three.js template) |
-| vite | ^7.3.1 | Build tool (dev) |
+| Package | Version  | Purpose                            |
+| ------- | -------- | ---------------------------------- |
+| phaser  | ^3.90.0  | 2D game engine (Phaser template)   |
+| three   | ^0.183.0 | 3D game engine (Three.js template) |
+| vite    | ^7.3.1   | Build tool (dev)                   |
 
 Audio uses the built-in Web Audio API (zero dependencies). Strudel.cc (`@strudel/web`, AGPL-3.0) is available as an optional upgrade for richer BGM — see the game-audio skill.
 
@@ -160,12 +162,14 @@ Audio uses the built-in Web Audio API (zero dependencies). Strudel.cc (`@strudel
 Skills use **progressive disclosure** via flat companion `.md` files alongside `SKILL.md`. This keeps `SKILL.md` concise (core patterns, decision trees, checklists) while detailed reference material lives in companion files that agents load on demand.
 
 **Convention:**
+
 - Companion files live in the same directory as `SKILL.md` (e.g., `skills/phaser/conventions.md`)
 - Do NOT use a `references/` subdirectory — keep files flat
 - Each `SKILL.md` has a `## Reference Files` section near the top listing all companions with descriptions
 - In the body, reference extracted content with `See filename.md for [topic].`
 
 **Example (`skills/phaser/`):**
+
 ```
 skills/phaser/
   SKILL.md                    # Core patterns, process, checklist (~290 lines)
@@ -190,12 +194,12 @@ Skills come in two flavors with a deliberate separation of concerns:
 
 Four domains have both a reference and a user-invocable skill:
 
-| Reference Skill | User-Invocable Skill | Why Both Exist |
-|-----------------|---------------------|----------------|
-| `game-audio` | `add-audio` | `game-audio` has Web Audio API patterns reused by `add-audio` AND `make-game` step 3 |
-| `game-qa` | `qa-game` | `game-qa` has Playwright patterns reused by `qa-game` AND the QA subagent in `make-game` |
-| `game-assets` | `add-assets` | `game-assets` has pixel art patterns reused by `add-assets` AND `make-game` step 1.5 |
-| `game-designer` | `design-game` | `game-designer` has visual polish patterns reused by `design-game` AND `make-game` step 2 |
+| Reference Skill | User-Invocable Skill | Why Both Exist                                                                            |
+| --------------- | -------------------- | ----------------------------------------------------------------------------------------- |
+| `game-audio`    | `add-audio`          | `game-audio` has Web Audio API patterns reused by `add-audio` AND `make-game` step 3      |
+| `game-qa`       | `qa-game`            | `game-qa` has Playwright patterns reused by `qa-game` AND the QA subagent in `make-game`  |
+| `game-assets`   | `add-assets`         | `game-assets` has pixel art patterns reused by `add-assets` AND `make-game` step 1.5      |
+| `game-designer` | `design-game`        | `game-designer` has visual polish patterns reused by `design-game` AND `make-game` step 2 |
 
 This separation avoids duplicating domain knowledge across multiple skills. The reference skill is the single source of truth; the user-invocable skill orchestrates the workflow and loads the reference skill for domain knowledge.
 
@@ -240,11 +244,13 @@ Anonymous, append-only telemetry tracks template usage (clones and clicks). No u
 **Backend**: `site/telemetry/` — Express + PostgreSQL, deployed on Railway.
 
 **Endpoints**:
+
 - `GET /t?event=clone|click&template=<id>&source=gallery|skill&v=1` — ingestion (returns 204)
 - `GET /stats` — aggregated clone/click counts per template (cached 60s)
 - `GET /health` — health check
 
 **Telemetry sources**:
+
 - Gallery page fires `click` event on "Use Template" button
 - `/use-template` skill fires `clone` event after successful copy (respects `DO_NOT_TRACK` / `DISABLE_TELEMETRY` env vars)
 
@@ -267,6 +273,7 @@ The `/monetize-game` command (and Step 5 of `/make-game`) registers games on [Pl
 ## Troubleshooting
 
 See `TROUBLESHOOTING.md` for common issues including:
+
 - Skill triggering (wrong skill loads, skill doesn't trigger, negative tests)
 - Build failures (module not found, port conflicts, empty dist)
 - Playwright/QA (browser not found, low FPS in headless, visual regression tolerance)
