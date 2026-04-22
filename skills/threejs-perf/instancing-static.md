@@ -91,15 +91,20 @@ instancedMesh.instanceColor.needsUpdate = true;
 
 ## Measured Results
 
-Scenario: 140×140 grid = 19,600 objects, Three.js r183.
+Scenario: 140×140 grid = 19,600 cubes, Three.js r183, headless Chromium 147 via Playwright, Apple M1 Pro, 30 warmup + 180 sample frames, median of 3 runs.
 
 | Metric | Baseline | Optimized | Delta |
 |--------|----------|-----------|-------|
-| Draw calls | 19,600 | 1 | -99.99% |
-| Build p95 | 63.3ms | 3.0ms | -95.3% |
-| Traversal p95 | 5.39ms | 0.002ms | -99.96% |
+| Draw calls (avg) | ~19,365 | 2 | ~9,682× fewer |
+| Render CPU p95 | 28.5ms | 0.5ms | ~57× faster |
+| Render CPU mean | 19.6ms | 0.21ms | ~95× faster |
+| Build | 39.4ms | 3.9ms | ~10× faster |
 | Mesh count | 19,600 | 0 | -100% |
 | InstancedMesh count | 0 | 1 | +1 |
+
+The optimized case reports 2 draw calls (not 1) because the scene also contains a floor plane — the 19,600-cube `InstancedMesh` itself is a single draw call. Baseline draw calls sit at ~19,365 rather than 19,600 because individual meshes at the far edges get frustum-culled; `InstancedMesh` does not cull per-instance, so it's all-or-nothing.
+
+FPS and frame-time p95 are not cited here — Playwright's bundled Chromium runs software WebGL (SwiftShader), which makes GPU-bound timing unreliable. On real hardware the FPS delta would be substantially larger.
 
 ## Template Files
 

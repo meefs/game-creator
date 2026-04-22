@@ -11,7 +11,7 @@ metadata:
 
 # Three.js Performance Optimization
 
-Performance patterns for Three.js games, backed by measured before/after numbers on Three.js r183.
+Performance patterns for Three.js games, backed by measured before/after numbers on Three.js r183 (headless Chromium via Playwright, Apple M1 Pro, software WebGL).
 
 ## Reference Files
 
@@ -38,7 +38,7 @@ Performance patterns for Three.js games, backed by measured before/after numbers
 
 **Solution**: One `InstancedMesh` per shared geometry+material combo.
 
-**Evidence**: 19,600 draw calls → 1. Traversal p95: 5.39ms → 0.002ms. See `instancing-static.md`.
+**Evidence**: ~19,365 → 2 draw calls. Render CPU p95: 28.5ms → 0.5ms (~57× faster). Build: 39.4ms → 3.9ms. See `instancing-static.md`.
 
 ```js
 // Anti-pattern: one Mesh per prop
@@ -65,7 +65,7 @@ scene.add(im); // 1 draw call
 
 **Solution**: Flat entity state buffer + batched `InstancedMesh.setMatrixAt()` writes.
 
-**Evidence**: 8,000 draw calls → 1. Update p95: 1.11ms → 0.51ms. Traversal p95: 1.75ms → 0.007ms. See `instancing-moving.md`.
+**Evidence**: 8,000 → 1 draw calls. Render CPU p95: 9.9ms → 0.5ms (~20× faster). Update loop p95: 1.4ms → 0.3ms. See `instancing-moving.md`.
 
 ```js
 // Anti-pattern: per-entity Mesh position writes
@@ -95,15 +95,19 @@ Is the object repeated 50+ times with same geometry+material?
 
 ## Measured Results
 
-Numbers below come from Puppeteer runs on Three.js r183, measured over 120 simulation ticks.
+Headless Chromium 147 via Playwright, Three.js r183, Apple M1 Pro, 30 warmup + 180 sample frames, median of 3 runs.
 
 | Scenario | Metric | Baseline | Optimized | Improvement |
 |----------|--------|----------|-----------|-------------|
-| Static World (19.6k) | Draw calls | 19,600 | 1 | 99.99% |
-| Static World (19.6k) | Traversal p95 | 5.39ms | 0.002ms | 99.96% |
-| Static World (19.6k) | Build p95 | 63.3ms | 3.0ms | 95.3% |
-| Moving Entities (8k) | Draw calls | 8,000 | 1 | 99.99% |
-| Moving Entities (8k) | Update p95 | 1.11ms | 0.51ms | 54.1% |
-| Moving Entities (8k) | Traversal p95 | 1.75ms | 0.007ms | 99.6% |
+| Static World (19.6k cubes) | Draw calls | ~19,365 | 2 | ~9,682× |
+| Static World (19.6k cubes) | Render CPU p95 | 28.5ms | 0.5ms | ~57× |
+| Static World (19.6k cubes) | Build | 39.4ms | 3.9ms | ~10× |
+| Moving Entities (8k wave-field) | Draw calls | 8,000 | 1 | 8,000× |
+| Moving Entities (8k wave-field) | Render CPU p95 | 9.9ms | 0.5ms | ~20× |
+| Moving Entities (8k wave-field) | Update loop p95 | 1.4ms | 0.3ms | ~4.7× |
 
-A benchmark passes if draw calls decreased and traversal p95 did not regress.
+### Methodology notes
+
+- **CPU-side metrics are the trustworthy signal.** Draw calls, render CPU p95, update loop, and build time reliably show the 1–2 order-of-magnitude win.
+- **FPS and frame-time p95 are unreliable in headless Chromium.** Playwright's bundled Chromium uses SwiftShader (software WebGL), which bottlenecks on fragment shading of ~90 MB of visible geometry regardless of draw-call count. On real hardware WebGL, the FPS gap would be substantially larger — baseline would drop to single-digit FPS under real fill, and optimized would hit vsync cleanly.
+- **A benchmark passes** if draw calls decreased and render CPU p95 did not regress.

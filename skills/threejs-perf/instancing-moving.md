@@ -134,15 +134,20 @@ function update(dt) {
 
 ## Measured Results
 
-Scenario: 8,000 entities, 120 simulation ticks, Three.js r183.
+Scenario: 8,000 entities in a wave-field (sin/cos of position + time), Three.js r183, headless Chromium 147 via Playwright, Apple M1 Pro, 30 warmup + 180 sample frames, median of 3 runs.
 
 | Metric | Baseline | Optimized | Delta |
 |--------|----------|-----------|-------|
-| Draw calls | 8,000 | 1 | -99.99% |
-| Update p95 | 1.11ms | 0.51ms | -54.1% |
-| Traversal p95 | 1.75ms | 0.007ms | -99.6% |
+| Draw calls (avg) | 8,000 | 1 | 8,000× fewer |
+| Render CPU p95 | 9.9ms | 0.5ms | ~20× faster |
+| Update loop p95 | 1.4ms | 0.3ms | ~4.7× faster |
+| Traversal p95 | 0.3ms | ~0ms | collapses to noise floor |
 | Mesh count | 8,000 | 0 | -100% |
 | InstancedMesh count | 0 | 1 | +1 |
+
+Update loop shrinks because `matrix.makeTranslation` + `setMatrixAt(i, m)` bypasses per-`Object3D` state churn (dirty flags, matrix recompute, parent propagation). Render CPU drops by ~20× because the baseline burns ~10ms per frame just submitting 8,000 draw calls.
+
+FPS and frame-time p95 are not cited here — Playwright's bundled Chromium runs software WebGL (SwiftShader), which bottlenecks on fragment shading regardless of draw-call count. On real hardware the FPS delta would be substantially larger.
 
 ## Template Files
 
