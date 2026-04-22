@@ -14,6 +14,7 @@ settings.json              # Default settings (activates game-creator agent)
 skills/
   phaser/SKILL.md          # 2D game patterns (Phaser 3, scene-based, multi-file)
   threejs-game/SKILL.md    # 3D game patterns (Three.js, event-driven)
+  threejs-perf/SKILL.md    # Three.js performance patterns with measured evidence (instancing static + moving)
   game-assets/SKILL.md     # Pixel art sprites (code-only, no external files)
   game-designer/SKILL.md   # Visual polish (gradients, particles, juice, transitions)
   game-audio/SKILL.md      # Procedural audio (Web Audio API BGM + SFX)
@@ -179,14 +180,14 @@ skills/phaser/
   performance.md              # Optimization tips, texture atlases, object pooling
 ```
 
-**Skills with companion files:** `phaser` (8), `game-qa` (7), `game-audio` (6), `meshyai` (3), `game-assets` (3), `threejs-game` (3+), `make-game` (3).
+**Skills with companion files:** `phaser` (8), `game-qa` (7), `game-audio` (6), `meshyai` (3), `game-assets` (3), `threejs-game` (3+), `threejs-perf` (2 + templates/), `make-game` (3).
 
 ## Reference vs User-Invocable Skills
 
 Skills come in two flavors with a deliberate separation of concerns:
 
 - **User-invocable skills** (17) — Triggered by slash commands (e.g., `/add-audio`). These handle the full user-facing workflow: detect the game, load reference skills, run the pipeline, validate output. They have `argument-hint` in frontmatter.
-- **Reference skills** (10) — Deep domain knowledge loaded by other skills (or directly via `/load`). They contain patterns, code examples, and conventions but don't drive a workflow themselves.
+- **Reference skills** (11) — Deep domain knowledge loaded by other skills (or directly via `/load`). They contain patterns, code examples, and conventions but don't drive a workflow themselves.
 
 Four domains have both a reference and a user-invocable skill:
 
