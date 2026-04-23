@@ -1,6 +1,6 @@
 ---
 name: scaffold-gateables
-description: Add gateable features to an existing browser game — skin picker, continue-after-death, bonus mode, save slots, QoL toggles. Monetization-agnostic scaffolding that leaves clean hooks for any paywall, subscription, or entitlement layer. Use when the user says "add gateables", "scaffold monetizable features", "add skin picker", "add continue-after-death", "make my game monetizable", or "add premium hooks". Do NOT use for Play.fun SDK integration (use monetize-game) or generic gameplay features (use add-feature).
+description: Add gateable features to an existing browser game — skin picker, continue-after-death, bonus mode, save slots, daily challenge. Monetization-agnostic scaffolding that leaves clean hooks for any paywall, subscription, or entitlement layer. Features are scaffolded at silver and gold tiers only (bronze is the default everyone gets). Use when the user says "add gateables", "scaffold monetizable features", "add skin picker", "add continue-after-death", "make my game monetizable", or "add premium hooks". Do NOT use for Play.fun SDK integration (use monetize-game) or generic gameplay features (use add-feature).
 argument-hint: "[path-to-game] [optional feature hints e.g. 'skins continue']"
 license: MIT
 metadata:
@@ -18,7 +18,7 @@ compatibility: Requires an existing Phaser 3 or Three.js game with game-creator 
 
 # Scaffold Gateables
 
-Add gateable features to an existing game. This skill produces *hooks* — skin pickers, continue-after-death flows, bonus modes, save slots, QoL toggles — each wired through EventBus with a single capability-check seam (`isEntitled(key)`). It does NOT add any specific monetization SDK (Play.fun, sub.games, Stripe, etc.); it produces the scaffolding that any paywall, subscription, or entitlement layer can later switch on.
+Add gateable features to an existing game. This skill produces *hooks* — skin pickers, continue-after-death flows, bonus modes, save slots, daily challenges — each wired through EventBus with a single capability-check seam (`isEntitled(key)`). It does NOT add any specific monetization SDK (Play.fun, sub.games, Stripe, etc.); it produces the scaffolding that any paywall, subscription, or entitlement layer can later switch on.
 
 The default state is everything locked — `isEntitled(key)` returns `false` for all keys. The game must feel completely normal in that state. When a downstream monetization layer flips an entitlement on, the gateable feature lights up.
 
@@ -28,19 +28,20 @@ Use these to reason about what to propose and what to reject. They are rules, no
 
 1. **Never gate the core loop.** If the game is about jumping, everyone jumps. Gate skins, not gravity.
 2. **Prefer additive over subtractive.** Add a bonus mode; don't shrink the free mode. Free players never feel punished.
-3. **Match the game's rhythm.** Short sessions → session-scoped perks (continue, daily skin, QoL toggle). Long-form → persistence (save slots, unlock tree, bonus chapters).
-4. **Propose 2–4 gateables, tiered where sensible.** Aim for one bronze nicety, one silver convenience, one gold spectacle. Numbers are targets — suggest what actually fits the game.
+3. **Match the game's rhythm.** Short sessions → session-scoped perks (continue, daily skin, daily challenge seed). Long-form → persistence (save slots, unlock tree, bonus chapters).
+4. **Propose 2–3 gateables at silver and gold only.** Bronze is the default — every player gets the bronze experience by default, so no feature is scaffolded there. Aim for one or two silver conveniences and one gold spectacle. Numbers are targets — suggest what actually fits the game.
 5. **Every gateable must degrade cleanly.** With `isEntitled` returning `false`, the game must feel normal — not broken, not missing.
 
 ## Tier Vocabulary
 
 Use game-standard progression labels: **bronze** / **silver** / **gold**. This keeps the skill monetization-agnostic and reads naturally to players.
 
-The downstream integration layer maps these to its own tier system:
+**Bronze is the default tier — every player is bronze by default.** The bronze experience IS the core game loop that everyone always gets. No feature is scaffolded at bronze; scaffold-gateables only produces features at **silver** and **gold**.
+
+The downstream integration layer maps silver/gold to its own paid tier system:
 
 | scaffold-gateables | sub.games | Play.fun (points-based) |
 |---|---|---|
-| bronze | free (email) | low-threshold points |
 | silver | supporter ($3–8/mo) | mid-threshold points |
 | gold | founder ($150/yr) | high-threshold points |
 
@@ -64,15 +65,15 @@ Then tell the creator one sentence:
 
 ### Step 2: Propose features
 
-Generate 2–4 candidate gateables anchored in the five principles. Present as a Markdown table:
+Generate 2–3 candidate gateables at silver and gold tiers anchored in the five principles. Present as a Markdown table:
 
 | Feature | Tier | Entitlement key | What it adds | Locked path | EventBus events | GameState additions |
 |---|---|---|---|---|---|---|
 | Skin picker | silver | `premium_skins` | 5 cosmetic variants via a picker on GameOverScene | Default skin only; button greyed out | `skin:selected`, `skin:unlocked` | `selectedSkin: 'default'`, `unlockedSkins: ['default']` (persist through reset) |
 | Continue after death | silver | `continue` | One continue per session offered on death | No continue prompt; immediate restart | `continue:offered`, `continue:accepted` | `continueOffered: false`, `usedContinue: false` (clear on reset) |
-| Screen-shake toggle | bronze | `qol_shake_toggle` | Settings toggle to disable screen shake | No toggle visible; screen shake always on (default) | `settings:shakeToggled` | `shakeDisabled: false` (persist through reset) |
+| Daily challenge mode | gold | `daily_challenge` | Unique seeded run each day with its own leaderboard | No daily challenge menu visible | `daily:opened`, `daily:completed` | `dailyChallengeSeed: null`, `dailyBestScore: 0` (persist through reset) |
 
-Anchor picks in the principles. Reject any suggestion that gates the core loop. Prefer cosmetic > convenience > bonus > persistence for short-session games; flip the order for long-form.
+Anchor picks in the principles. Reject any suggestion that gates the core loop. Never propose bronze-tier features — bronze is the default everyone gets. Prefer cosmetic > convenience > bonus > persistence for short-session games; flip the order for long-form.
 
 **In interactive mode (user-invoked skill):** wait for creator confirmation before implementing. Let them drop, swap, or tweak suggestions.
 

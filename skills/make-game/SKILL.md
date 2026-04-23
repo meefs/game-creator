@@ -161,7 +161,7 @@ Mark the scaffold task as `completed`.
 
 **Skip this step entirely if `MONETIZATION_INTENT == 'none'`.**
 
-This step scaffolds monetization-agnostic gateable features (skin picker, continue-after-death, bonus mode, QoL toggles) with a single `isEntitled()` capability seam. It does not add any monetization SDK — that comes in Step 5 (Play.fun) or externally via `/subgames` (sub.games). Running Step 1.25 ensures downstream monetization has real features to gate, instead of bolting an SDK onto a loop with nothing to wrap.
+This step scaffolds monetization-agnostic gateable features (skin picker, continue-after-death, bonus mode, daily challenge) with a single `isEntitled()` capability seam. Features are scaffolded at silver and gold tiers only — bronze is the default everyone gets. It does not add any monetization SDK — that comes in Step 5 (Play.fun) or externally via `/subgames` (sub.games). Running Step 1.25 ensures downstream monetization has real features to gate, instead of bolting an SDK onto a loop with nothing to wrap.
 
 Mark the gateables task as `in_progress`.
 
@@ -603,7 +603,7 @@ Tell the user:
 > - **Scaffolded architecture** — clean, modular code with delta capping, object pooling, and resource disposal
 > - **Pixel art sprites** — recognizable characters (if chosen) or clean geometric shapes
 > - **3D environments** — photorealistic Gaussian Splat worlds (3D games with World Labs)
-> - **Gateables scaffolded** — `isEntitled()` hooks for skins, continue, QoL toggles (all locked by default, ready for monetization wiring) *[include only if Step 1.25 ran]*
+> - **Gateables scaffolded** — `isEntitled()` hooks for skins, continue, bonus modes at silver/gold tiers (all locked by default, ready for monetization wiring) *[include only if Step 1.25 ran]*
 > - **Visual polish** — gradients, particles, transitions, juice
 > - **Promo video** — 50 FPS gameplay footage in mobile portrait (`output/promo.mp4`)
 > - **Music and SFX** — chiptune background music and retro sound effects

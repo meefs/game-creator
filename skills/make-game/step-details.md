@@ -237,9 +237,9 @@ Launch a `Task` subagent with these instructions:
 > Apply the scaffold-gateables skill in **pipeline (non-interactive) mode**:
 >
 > 1. Read the game code per the skill's Step 1. Summarize the core loop verb — you will not gate it.
-> 2. Propose 2–3 gateables using the skill's five principles. Do NOT ask the user — auto-pick based on the game's loop type:
->    - Short-session/arcade games → one cosmetic (skin picker), one session-scoped convenience (continue-after-death), optionally one QoL toggle
->    - Long-form/progression games → one persistence feature (save slots or bonus chapters), one cosmetic, optionally one QoL
+> 2. Propose 2–3 gateables at silver and gold tiers only (never bronze — bronze is the default everyone plays). Do NOT ask the user — auto-pick based on the game's loop type:
+>    - Short-session/arcade games → one silver cosmetic (skin picker), one silver session-scoped convenience (continue-after-death), optionally one gold spectacle (daily challenge mode or exclusive skin pack)
+>    - Long-form/progression games → one silver persistence feature (save slots or extra inventory), one silver cosmetic, optionally one gold flagship (bonus chapter or hardcore mode)
 > 3. Implement per the skill's Step 3:
 >    - Create `src/systems/Entitlements.js` with `isEntitled(key)` returning `false` and a TODO directing to the monetization layer
 >    - Add events to `src/core/EventBus.js` (append-only, `domain:action`)
