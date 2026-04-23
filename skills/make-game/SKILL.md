@@ -114,13 +114,10 @@ Ask the user (unless already answered earlier in the conversation):
 > 2. **Play.fun** — points, leaderboards, wallet rewards (bundled, runs in Step 5)
 > 3. **sub.games** — subscription tiers (run `/subgames` separately after this pipeline; it lives in a different repo)
 > 4. **both** — Play.fun for points + sub.games tiers
-> 5. **unsure** — pick for me (I'll default to Play.fun and announce it)
 >
 > Reply with a number or keyword.
 
-Store the answer as `MONETIZATION_INTENT` ∈ {`none`, `playfun`, `subgames`, `both`, `unsure`}. Treat `unsure` as `playfun` from here on, and say so out loud:
-
-> Treating "unsure" as **Play.fun** (the bundled default). Reply "change to none/sub.games/both" any time to override.
+Store the answer as `MONETIZATION_INTENT` ∈ {`none`, `playfun`, `subgames`, `both`}. If the creator gives an ambiguous answer, re-ask rather than guessing.
 
 `MONETIZATION_INTENT` is a pipeline-wide variable. It determines:
 - Whether Step 1.25 (Scaffold gateables) runs
@@ -140,7 +137,7 @@ Base tasks (always included):
 7. Add QA test suite (Playwright — gameplay, visual, perf)
 8. Deploy to here.now
 9. **[CONDITIONAL]** Monetize — task form depends on intent:
-   - `playfun` / `unsure` / `both` → "Monetize with Play.fun (register on OpenGameProtocol, add SDK, redeploy)"
+   - `playfun` / `both` → "Monetize with Play.fun (register on OpenGameProtocol, add SDK, redeploy)"
    - `subgames` → "Instruct user to run `/subgames` externally (skill lives in `subdotgames/skills`, not bundled)"
    - `none` → omit this task entirely
 
@@ -356,7 +353,7 @@ Add a `deploy` script to `package.json` so future deploys are one command:
 
 | Intent | Line to use |
 |---|---|
-| `playfun` / `unsure` / `both` | **Next up: monetization.** I'll register your game on Play.fun (OpenGameProtocol), add the points SDK, and redeploy. Players earn rewards, you get a play.fun URL to share on Moltbook. Ready? |
+| `playfun` / `both` | **Next up: monetization.** I'll register your game on Play.fun (OpenGameProtocol), add the points SDK, and redeploy. Players earn rewards, you get a play.fun URL to share on Moltbook. Ready? |
 | `subgames` | **Next up: sub.games integration.** Your game has gateable hooks from Step 1.25 ready to wire to subscription tiers. I don't bundle the sub.games skill — install and run `/subgames` separately from the `subdotgames/skills` repo. Pipeline complete on my end. |
 | `none` | Pipeline complete — your game is live and monetization is off per your Step 0 choice. You can add it later with `/monetize-game` (Play.fun) or `/subgames` (subscription tiers). |
 
@@ -389,7 +386,7 @@ Mark the monetize task as `in_progress`.
 #### 8.0 Branch on MONETIZATION_INTENT
 
 - **`none`** — Step 5 should not exist (the monetize task was never created). If you reach here with `none`, skip everything and proceed to Step 5.5.
-- **`playfun`** or **`unsure`** — Run the existing 8a–8e Play.fun flow below. Mark the monetize task `completed` at the end.
+- **`playfun`** — Run the existing 8a–8e Play.fun flow below. Mark the monetize task `completed` at the end.
 - **`subgames`** — Skip 8a–8e entirely. Tell the user:
   > You picked **sub.games** in Step 0. I don't bundle that skill — it lives in the `subdotgames/skills` repo, maintained by a different org. Your game already has gateable hooks from Step 1.25 (see `src/systems/Entitlements.js`). To add subscription tiers, install and run `/subgames` separately against this project directory:
   > ```
@@ -400,7 +397,7 @@ Mark the monetize task as `in_progress`.
 - **`both`** — Run 8a–8e (Play.fun flow) first. At the end of 8e, additionally tell the user:
   > Play.fun is live. You also picked **sub.games** — for subscription tiers on top of the gateables scaffolded in Step 1.25, install and run `/subgames` separately from the `subdotgames/skills` repo.
 
-The remaining subsections (8a–8e) apply only to the `playfun`, `unsure`, and `both` branches.
+The remaining subsections (8a–8e) apply only to the `playfun` and `both` branches.
 
 **This step stays in the main thread** because it requires interactive authentication.
 
@@ -597,7 +594,7 @@ Result: Fetches tweet → abstracts game concept → 3D Three.js scaffold → Me
 **Assemble the final message based on `MONETIZATION_INTENT`:**
 
 - Include the **Gateables** bullet only when `MONETIZATION_INTENT != 'none'` (Step 1.25 ran).
-- Include the **Monetized on Play.fun** bullet + the Moltbook share line only when `MONETIZATION_INTENT ∈ {'playfun', 'unsure', 'both'}`.
+- Include the **Monetized on Play.fun** bullet + the Moltbook share line only when `MONETIZATION_INTENT ∈ {'playfun', 'both'}`.
 - Include the **sub.games next** callout only when `MONETIZATION_INTENT ∈ {'subgames', 'both'}`.
 
 Tell the user:
@@ -613,10 +610,10 @@ Tell the user:
 > - **Test suite** — run `npm test` for gameplay, visual regression, and performance checks
 > - **Quality assured** — each step verified with build, runtime, and visual review
 > - **Live on the web** — deployed to here.now with an instant public URL
-> - **Monetized on Play.fun** — points tracking, leaderboards, and wallet connect *[include only for playfun/unsure/both]*
+> - **Monetized on Play.fun** — points tracking, leaderboards, and wallet connect *[include only for playfun/both]*
 > - **Quality score** — architecture, performance, and code quality review
 >
-> *[if playfun/unsure/both]* **Share your play.fun URL on Moltbook** to reach 770K+ agents on the agent internet.
+> *[if playfun/both]* **Share your play.fun URL on Moltbook** to reach 770K+ agents on the agent internet.
 > **Post your promo video** to TikTok, Reels, or X to drive traffic.
 >
 > *[if subgames or both]* **Sub.games next:** Your gateables are ready to wire to subscription tiers. Install and run the sub.games skill separately:
