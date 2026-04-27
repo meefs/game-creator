@@ -68,6 +68,7 @@ Build a complete browser game from scratch, step by step. This command walks you
 
 **What goes to subagents** (via `Task` tool):
 - Step 1 (game implementation): Transform template into the actual game concept
+- Step 1.25 (conditional — skip if `MONETIZATION_INTENT == 'none'`): Scaffold gateable features (skin picker, continue-after-death, etc.) with `isEntitled()` seam
 - Step 1.5: Pixel art sprites and backgrounds (2D) or World Labs environments + Meshy AI models (3D)
 - Step 2: Visual polish
 - Step 2.5: Promo video capture
@@ -78,7 +79,7 @@ Each subagent receives: step instructions, relevant skill name, project path, en
 
 ## Verification Protocol
 
-Run after every code-modifying step (Steps 1, 1.5, 2, 3). Step 3.5 runs its own test verification. Delegates all QA work to a subagent to minimize main-thread context usage.
+Run after every code-modifying step (Steps 1, 1.25 when applicable, 1.5, 2, 3). Step 3.5 runs its own test verification. Delegates all QA work to a subagent to minimize main-thread context usage.
 
 See [verification-protocol.md](verification-protocol.md) for full QA subagent instructions, orchestrator flow, and autofix logic.
 
@@ -104,16 +105,41 @@ For 3D games, check for these API keys — first in `.env` (`test -f .env && gre
 
 See [tweet-pipeline.md](tweet-pipeline.md) for the full tweet fetching, parsing, creative abstraction, celebrity detection, and Meshy API key flow.
 
-Create all pipeline tasks upfront using `TaskCreate`:
+#### Monetization intent
+
+Ask the user (unless already answered earlier in the conversation):
+
+> Before we scaffold: how do you plan to monetize this game?
+> 1. **none** — just a fun build, no monetization
+> 2. **Play.fun** — points, leaderboards, wallet rewards (bundled, runs in Step 5)
+> 3. **sub.games** — subscription tiers (run `/subgames` separately after this pipeline; it lives in a different repo)
+> 4. **both** — Play.fun for points + sub.games tiers
+>
+> Reply with a number or keyword.
+
+Store the answer as `MONETIZATION_INTENT` ∈ {`none`, `playfun`, `subgames`, `both`}. If the creator gives an ambiguous answer, re-ask rather than guessing.
+
+`MONETIZATION_INTENT` is a pipeline-wide variable. It determines:
+- Whether Step 1.25 (Scaffold gateables) runs
+- Which "next up" message Step 4 shows at the end of deploy
+- How Step 5 branches (Play.fun flow, skip, or instruct creator to run `/subgames` externally)
+
+Create all pipeline tasks upfront using `TaskCreate`. **Build the task list conditionally** based on `MONETIZATION_INTENT`:
+
+Base tasks (always included):
 
 1. Scaffold game from template
-2. Add assets: pixel art sprites (2D) or World Labs environments + Meshy AI-generated GLB models + animated characters (3D)
-3. Add visual polish (particles, transitions, juice)
-4. Record promo video (autonomous 50 FPS capture)
-5. Add audio (BGM + SFX)
-6. Add QA test suite (Playwright — gameplay, visual, perf)
-7. Deploy to here.now
-8. Monetize with Play.fun (register on OpenGameProtocol, add SDK, redeploy)
+2. **[CONDITIONAL]** Scaffold gateables — include ONLY IF `MONETIZATION_INTENT != 'none'`. Produces `isEntitled()` hooks and gateable features (skin picker, continue-after-death, etc.) that any monetization layer can activate later.
+3. Add assets: pixel art sprites (2D) or World Labs environments + Meshy AI-generated GLB models + animated characters (3D)
+4. Add visual polish (particles, transitions, juice)
+5. Record promo video (autonomous 50 FPS capture)
+6. Add audio (BGM + SFX)
+7. Add QA test suite (Playwright — gameplay, visual, perf)
+8. Deploy to here.now
+9. **[CONDITIONAL]** Monetize — task form depends on intent:
+   - `playfun` / `both` → "Monetize with Play.fun (register on OpenGameProtocol, add SDK, redeploy)"
+   - `subgames` → "Instruct user to run `/subgames` externally (skill lives in `subdotgames/skills`, not bundled)"
+   - `none` → omit this task entirely
 
 This gives the user full visibility into pipeline progress at all times. Quality assurance (build, runtime, visual review, autofix) is built into each step, not a separate task.
 
@@ -121,13 +147,29 @@ After creating tasks, create the `output/` directory in the project root and ini
 
 ### Step 1: Scaffold the game
 
-Mark task 1 as `in_progress`.
+Mark the scaffold task as `in_progress`.
 
 See [step-details.md](step-details.md) for the full Step 1 infrastructure setup, subagent prompt template, progress.md creation, and user messaging.
 
 **After subagent returns**, run the Verification Protocol (see [verification-protocol.md](verification-protocol.md)).
 
-Mark task 1 as `completed`.
+Mark the scaffold task as `completed`.
+
+**Wait for user confirmation before proceeding.**
+
+### Step 1.25: Scaffold gateables (conditional)
+
+**Skip this step entirely if `MONETIZATION_INTENT == 'none'`.**
+
+This step scaffolds monetization-agnostic gateable features (skin picker, continue-after-death, bonus mode, daily challenge) with a single `isEntitled()` capability seam. Features are scaffolded at silver and gold tiers only — bronze is the default everyone gets. It does not add any monetization SDK — that comes in Step 5 (Play.fun) or externally via `/subgames` (sub.games). Running Step 1.25 ensures downstream monetization has real features to gate, instead of bolting an SDK onto a loop with nothing to wrap.
+
+Mark the gateables task as `in_progress`.
+
+See [step-details.md](step-details.md) for the full Step 1.25 subagent prompt template.
+
+**After subagent returns**, run the Verification Protocol (see [verification-protocol.md](verification-protocol.md)).
+
+Mark the gateables task as `completed`.
 
 **Wait for user confirmation before proceeding.**
 
@@ -135,65 +177,65 @@ Mark task 1 as `completed`.
 
 **Always run this step for both 2D and 3D games.** 2D games get pixel art sprites; 3D games get GLB models and animated characters.
 
-Mark task 2 as `in_progress`.
+Mark the assets task as `in_progress`.
 
 See [step-details.md](step-details.md) for the full Step 1.5 character library check, tiered fallback, 2D subagent prompt, 3D asset flow, 3D subagent prompt, and user messaging.
 
 **After subagent returns**, run the Verification Protocol (see [verification-protocol.md](verification-protocol.md)).
 
-Mark task 2 as `completed`.
+Mark the assets task as `completed`.
 
 **Wait for user confirmation before proceeding.**
 
 ### Step 2: Design the visuals
 
-Mark task 3 as `in_progress`.
+Mark the design task as `in_progress`.
 
 See [step-details.md](step-details.md) for the full Step 2 subagent prompt template (spectacle-first design, opening moment, combo system, design audit, intensity calibration) and user messaging.
 
 **After subagent returns**, run the Verification Protocol (see [verification-protocol.md](verification-protocol.md)).
 
-Mark task 3 as `completed`.
+Mark the design task as `completed`.
 
 **Proceed directly to Step 2.5** — no user confirmation needed (promo video is non-destructive and fast).
 
 ### Step 2.5: Record promo video
 
-Mark task 4 as `in_progress`.
+Mark the promo video task as `in_progress`.
 
 See [step-details.md](step-details.md) for the full Step 2.5 promo video capture flow: FFmpeg check, capture script subagent, capture execution, conversion, thumbnail extraction, and user messaging.
 
-Mark task 4 as `completed`.
+Mark the promo video task as `completed`.
 
 **Wait for user confirmation before proceeding.**
 
 ### Step 3: Add audio
 
-Mark task 5 as `in_progress`.
+Mark the audio task as `in_progress`.
 
 See [step-details.md](step-details.md) for the full Step 3 subagent prompt template (AudioManager, BGM, SFX, AudioBridge, mute toggle) and user messaging.
 
 **After subagent returns**, run the Verification Protocol (see [verification-protocol.md](verification-protocol.md)).
 
-Mark task 5 as `completed`.
+Mark the audio task as `completed`.
 
 **Wait for user confirmation before proceeding.**
 
 ### Step 3.5: Add QA test suite
 
-Mark task 6 as `in_progress`.
+Mark the QA task as `in_progress`.
 
 See [step-details.md](step-details.md) for the full Step 3.5 subagent prompt template (Playwright install, test fixtures, game/visual/perf specs, npm scripts).
 
 **After subagent returns**, run `npm test` to verify all tests pass. Fix test code (not game code) if needed.
 
-Mark task 6 as `completed`.
+Mark the QA task as `completed`.
 
 **Wait for user confirmation before proceeding.**
 
 ### Step 4: Deploy to here.now
 
-Mark task 7 as `in_progress`.
+Mark the deploy task as `in_progress`.
 
 **This step stays in the main thread** because it may require user back-and-forth for API key setup.
 
@@ -305,7 +347,15 @@ Add a `deploy` script to `package.json` so future deploys are one command:
 > ```
 > Or if you're working with me, I'll rebuild and redeploy for you.
 >
-> **Next up: monetization.** I'll register your game on Play.fun (OpenGameProtocol), add the points SDK, and redeploy. Players earn rewards, you get a play.fun URL to share on Moltbook. Ready?
+> [NEXT-UP LINE — choose based on `MONETIZATION_INTENT`, see table below]
+
+**Choose the "next up" line based on `MONETIZATION_INTENT`:**
+
+| Intent | Line to use |
+|---|---|
+| `playfun` / `both` | **Next up: monetization.** I'll register your game on Play.fun (OpenGameProtocol), add the points SDK, and redeploy. Players earn rewards, you get a play.fun URL to share on Moltbook. Ready? |
+| `subgames` | **Next up: sub.games integration.** Your game has gateable hooks from Step 1.25 ready to wire to subscription tiers. I don't bundle the sub.games skill — install and run `/subgames` separately from the `subdotgames/skills` repo. Pipeline complete on my end. |
+| `none` | Pipeline complete — your game is live and monetization is off per your Step 0 choice. You can add it later with `/monetize-game` (Play.fun) or `/subgames` (subscription tiers). |
 
 **Tell the user (if anonymous — no API key):**
 > Your game is live!
@@ -321,17 +371,33 @@ Add a `deploy` script to `package.json` so future deploys are one command:
 > npm run deploy
 > ```
 >
-> **Next up: monetization.** I'll register your game on Play.fun (OpenGameProtocol), add the points SDK, and redeploy. Players earn rewards, you get a play.fun URL to share on Moltbook. Ready?
+> [NEXT-UP LINE — use the same `MONETIZATION_INTENT` branching table shown above]
 
 > For advanced deployment options (GitHub Pages, custom domains, troubleshooting), load the `game-deploy` skill.
 
-Mark task 7 as `completed`.
+Mark the deploy task as `completed`.
 
 **Wait for user confirmation before proceeding.**
 
-### Step 5: Monetize with Play.fun
+### Step 5: Monetize (branches on MONETIZATION_INTENT)
 
-Mark task 8 as `in_progress`.
+Mark the monetize task as `in_progress`.
+
+#### 8.0 Branch on MONETIZATION_INTENT
+
+- **`none`** — Step 5 should not exist (the monetize task was never created). If you reach here with `none`, skip everything and proceed to Step 5.5.
+- **`playfun`** — Run the existing 8a–8e Play.fun flow below. Mark the monetize task `completed` at the end.
+- **`subgames`** — Skip 8a–8e entirely. Tell the user:
+  > You picked **sub.games** in Step 0. I don't bundle that skill — it lives in the `subdotgames/skills` repo, maintained by a different org. Your game already has gateable hooks from Step 1.25 (see `src/systems/Entitlements.js`). To add subscription tiers, install and run `/subgames` separately against this project directory:
+  > ```
+  > npx skills add subdotgames/skills
+  > /subgames .
+  > ```
+  > Mark the monetize task `completed` and proceed to Step 5.5.
+- **`both`** — Run 8a–8e (Play.fun flow) first. At the end of 8e, additionally tell the user:
+  > Play.fun is live. You also picked **sub.games** — for subscription tiers on top of the gateables scaffolded in Step 1.25, install and run `/subgames` separately from the `subdotgames/skills` repo.
+
+The remaining subsections (8a–8e) apply only to the `playfun` and `both` branches.
 
 **This step stays in the main thread** because it requires interactive authentication.
 
@@ -490,7 +556,7 @@ Verify the deployment is live (here.now deploys are instant; GitHub Pages may ta
 >
 > **Share on Moltbook**: Post your game URL to [moltbook.com](https://www.moltbook.com/) — 770K+ agents ready to play and upvote.
 
-Mark task 8 as `completed`.
+Mark the monetize task as `completed`.
 
 ### Step 5.5: Code Review (informational)
 
@@ -525,26 +591,40 @@ Result: Fetches tweet → abstracts game concept → 3D Three.js scaffold → Me
 
 ### Pipeline Complete!
 
+**Assemble the final message based on `MONETIZATION_INTENT`:**
+
+- Include the **Gateables** bullet only when `MONETIZATION_INTENT != 'none'` (Step 1.25 ran).
+- Include the **Monetized on Play.fun** bullet + the Moltbook share line only when `MONETIZATION_INTENT ∈ {'playfun', 'both'}`.
+- Include the **sub.games next** callout only when `MONETIZATION_INTENT ∈ {'subgames', 'both'}`.
+
 Tell the user:
 
 > Your game has been through the full pipeline! Here's what you have:
 > - **Scaffolded architecture** — clean, modular code with delta capping, object pooling, and resource disposal
 > - **Pixel art sprites** — recognizable characters (if chosen) or clean geometric shapes
 > - **3D environments** — photorealistic Gaussian Splat worlds (3D games with World Labs)
+> - **Gateables scaffolded** — `isEntitled()` hooks for skins, continue, bonus modes at silver/gold tiers (all locked by default, ready for monetization wiring) *[include only if Step 1.25 ran]*
 > - **Visual polish** — gradients, particles, transitions, juice
 > - **Promo video** — 50 FPS gameplay footage in mobile portrait (`output/promo.mp4`)
 > - **Music and SFX** — chiptune background music and retro sound effects
 > - **Test suite** — run `npm test` for gameplay, visual regression, and performance checks
 > - **Quality assured** — each step verified with build, runtime, and visual review
 > - **Live on the web** — deployed to here.now with an instant public URL
-> - **Monetized on Play.fun** — points tracking, leaderboards, and wallet connect
+> - **Monetized on Play.fun** — points tracking, leaderboards, and wallet connect *[include only for playfun/both]*
 > - **Quality score** — architecture, performance, and code quality review
 >
-> **Share your play.fun URL on Moltbook** to reach 770K+ agents on the agent internet.
+> *[if playfun/both]* **Share your play.fun URL on Moltbook** to reach 770K+ agents on the agent internet.
 > **Post your promo video** to TikTok, Reels, or X to drive traffic.
+>
+> *[if subgames or both]* **Sub.games next:** Your gateables are ready to wire to subscription tiers. Install and run the sub.games skill separately:
+> ```
+> npx skills add subdotgames/skills
+> /subgames .
+> ```
 >
 > **What's next?**
 > - Add new gameplay features: `/game-creator:add-feature [describe what you want]`
+> - Add more gateables later: `/game-creator:scaffold-gateables`
 > - Upgrade to pixel art (if using shapes): `/game-creator:add-assets`
 > - Re-record promo video: `/game-creator:record-promo`
 > - Run a deeper code review: `/game-creator:review-game`

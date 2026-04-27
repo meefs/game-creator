@@ -207,7 +207,74 @@ Write `progress.md` with this structure:
 >
 > **Next up: pixel art.** I'll create custom pixel art sprites for every character, enemy, item, and background tile — all generated as code, no image files needed. Then I'll add visual polish on top.
 
-Mark task 1 as `completed`.
+Mark the scaffold task as `completed`.
+
+**Wait for user confirmation before proceeding.**
+
+---
+
+## Step 1.25: Scaffold Gateables (Conditional)
+
+**Skip entirely if `MONETIZATION_INTENT == 'none'`.**
+
+This step layers gateable features onto the scaffolded game so downstream monetization (Play.fun points, sub.games tiers, or any custom paywall) has real features to gate. It produces a single `isEntitled()` capability seam plus 2–3 gateable features with clean-degradation locked paths.
+
+Mark the gateables task as `in_progress`.
+
+### Subagent — Gateables Implementation
+
+Launch a `Task` subagent with these instructions:
+
+> You are implementing Step 1.25 (Scaffold Gateables) of the game creation pipeline.
+>
+> **Project path**: `<project-dir>`
+> **Engine**: `<2d|3d>`
+> **Monetization intent**: `<playfun|subgames|both>` (for context only — do NOT add any monetization SDK code in this step)
+> **Skill to load**: `scaffold-gateables` (plus `phaser` for 2D or `threejs-game` for 3D)
+>
+> **Read `progress.md`** at the project root before starting to understand what was just scaffolded in Step 1.
+>
+> Apply the scaffold-gateables skill in **pipeline (non-interactive) mode**:
+>
+> 1. Read the game code per the skill's Step 1. Summarize the core loop verb — you will not gate it.
+> 2. Propose 2–3 gateables at silver and gold tiers only (never bronze — bronze is the default everyone plays). Do NOT ask the user — auto-pick based on the game's loop type:
+>    - Short-session/arcade games → one silver cosmetic (skin picker), one silver session-scoped convenience (continue-after-death), optionally one gold spectacle (daily challenge mode or exclusive skin pack)
+>    - Long-form/progression games → one silver persistence feature (save slots or extra inventory), one silver cosmetic, optionally one gold flagship (bonus chapter or hardcore mode)
+> 3. Implement per the skill's Step 3:
+>    - Create `src/systems/Entitlements.js` with `isEntitled(key)` returning `false` and a TODO directing to the monetization layer
+>    - Add events to `src/core/EventBus.js` (append-only, `domain:action`)
+>    - Add state fields to `src/core/GameState.js`; update `reset()` to preserve persistent state
+>    - Add constants to `src/core/Constants.js` under a `GATEABLES` section
+>    - Create gateable modules (`src/ui/SkinPicker.js`, `src/systems/ContinueFlow.js`, etc.) — NEVER a pre-gameplay title screen
+>    - Every entry point calls `isEntitled(key)` and branches; the locked path must produce normal gameplay
+>    - Update `window.render_game_to_text()` additively
+> 4. Confirm the locked path: with `isEntitled` returning `false`, the game must feel identical to its Step 1 state — no broken UI, no missing mechanics.
+> 5. Append a `## Step 1.25: Gateables` section to `progress.md` with: features added (name + tier + entitlement key), EventBus events, GameState fields (persistent vs transient), Constants keys, locked-path description.
+>
+> Do NOT run builds — the orchestrator runs the Verification Protocol after you return.
+> Do NOT add any monetization SDK code — Play.fun is Step 5; sub.games is external via `/subgames`.
+>
+> Report back: list the gateables added (table from skill Step 2), the entitlement keys used, and any files modified or created.
+
+### Verification
+
+**After subagent returns**, run the Verification Protocol (see [verification-protocol.md](verification-protocol.md)).
+
+Build verification must pass. Runtime verification should show the game behaves as it did after Step 1 — the gateables are all locked, so nothing visible should change unless a gateable entry point (like a "Skins" button on GameOverScene) was added. That's fine; confirm it renders but is greyed/locked.
+
+### User messaging
+
+Tell the user:
+
+> **Gateables scaffolded.** Your game now has monetization-agnostic hooks ready to wire to any paywall or subscription layer:
+>
+> - [list each gateable: name + tier label + entitlement key]
+>
+> All locked by default — the single seam is `src/systems/Entitlements.js`. When you're ready to monetize, `/monetize-game` or `/subgames` will flip these on.
+>
+> **Next up: game assets.**
+
+Mark the gateables task as `completed`.
 
 **Wait for user confirmation before proceeding.**
 
@@ -217,7 +284,7 @@ Mark task 1 as `completed`.
 
 **Always run this step for both 2D and 3D games.** 2D games get pixel art sprites; 3D games get GLB models and animated characters.
 
-Mark task 2 as `in_progress`.
+Mark the assets task as `in_progress`.
 
 ### Pre-step: Character Library Check
 
@@ -519,7 +586,7 @@ node <plugin-root>/scripts/find-3d-asset.mjs --query "<entity description>" \
 
 > **Next up: visual polish.** I'll add particles, screen transitions, and juice effects. Ready?
 
-Mark task 2 as `completed`.
+Mark the assets task as `completed`.
 
 **Wait for user confirmation before proceeding.**
 
@@ -527,7 +594,7 @@ Mark task 2 as `completed`.
 
 ## Step 2: Design the Visuals
 
-Mark task 3 as `in_progress`.
+Mark the design task as `in_progress`.
 
 Launch a `Task` subagent with these instructions:
 
@@ -585,7 +652,7 @@ Launch a `Task` subagent with these instructions:
 >
 > **Next up: promo video.** I'll autonomously record a 50 FPS gameplay clip in mobile portrait — ready for social media. Then we'll add music and sound effects.
 
-Mark task 3 as `completed`.
+Mark the design task as `completed`.
 
 **Proceed directly to Step 2.5** — no user confirmation needed (promo video is non-destructive and fast).
 
@@ -593,7 +660,7 @@ Mark task 3 as `completed`.
 
 ## Step 2.5: Record Promo Video
 
-Mark task 4 as `in_progress`.
+Mark the promo video task as `in_progress`.
 
 **This step stays in the main thread.** It does not modify game code — it records autonomous gameplay footage using Playwright and converts it with FFmpeg. No QA verification needed.
 
@@ -606,7 +673,7 @@ ffmpeg -version | head -1
 If FFmpeg is not found, warn the user and skip this step:
 > FFmpeg is not installed. Skipping promo video. Install it with `brew install ffmpeg` (macOS) or `apt install ffmpeg` (Linux), then run `/game-creator:promo-video` later.
 
-Mark task 4 as `completed` and proceed to Step 3.
+Mark the promo video task as `completed` and proceed to Step 3.
 
 **Copy the conversion script** from the plugin:
 
@@ -685,7 +752,7 @@ Read the thumbnail image and show it to the user.
 >
 > **Next up: music and sound effects.** Ready?
 
-Mark task 4 as `completed`.
+Mark the promo video task as `completed`.
 
 **Wait for user confirmation before proceeding.**
 
@@ -693,7 +760,7 @@ Mark task 4 as `completed`.
 
 ## Step 3: Add Audio
 
-Mark task 5 as `in_progress`.
+Mark the audio task as `in_progress`.
 
 Launch a `Task` subagent with these instructions:
 
@@ -727,7 +794,7 @@ Launch a `Task` subagent with these instructions:
 >
 > **Next up: QA tests.** I'll add a persistent Playwright test suite so you can run `npm test` after future changes. Ready?
 
-Mark task 5 as `completed`.
+Mark the audio task as `completed`.
 
 **Wait for user confirmation before proceeding.**
 
@@ -735,7 +802,7 @@ Mark task 5 as `completed`.
 
 ## Step 3.5: Add QA Test Suite
 
-Mark task 6 as `in_progress`.
+Mark the QA task as `in_progress`.
 
 Launch a `Task` subagent with these instructions:
 
@@ -804,6 +871,6 @@ If tests fail, fix test code (not game code) — adjust timeouts, selectors, or 
 >
 > **Next up: deploy to the web.** I'll publish your game to here.now for an instant public URL. Ready?
 
-Mark task 6 as `completed`.
+Mark the QA task as `completed`.
 
 **Wait for user confirmation before proceeding.**
