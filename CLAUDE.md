@@ -36,6 +36,7 @@ skills/
   record-promo/SKILL.md    # Record autonomous promo video (standalone command)
   monetize-game/SKILL.md   # Play.fun monetization (register, SDK, redeploy)
   scaffold-gateables/SKILL.md  # Add monetization-agnostic gateable features (isEntitled hooks + skin picker, continue, etc.)
+  add-multiplayer/SKILL.md # Add real-time or turn-based multiplayer via PartyKit (Cloudflare Durable Objects)
   qa-game/SKILL.md         # Add Playwright QA tests
   sub-games/SKILL.md       # Sub.games community platform for finding players and supporters
   review-game/SKILL.md     # Code review for architecture + best practices
@@ -75,6 +76,7 @@ examples/
   flappy-bird/             # Complete example game (see below)
   nick-land-dodger/        # Dodge game with photo-composite character + promo video
   3d-asset-test/           # 3D asset pipeline demo (animated characters, model loading, OrbitControls)
+  maze-tanks/              # 4-player multiplayer demo (PartyKit + Cloudflare DOs) — exercises the add-multiplayer skill
 ```
 
 **Game creation directory**: When the `/make-game` pipeline is launched from within the `game-creator` repository (i.e., the current working directory is `game-creator/` or a subdirectory), new games **must be created in `examples/`** (e.g., `examples/<game-name>/`). This keeps the repo organized and ensures example games are versioned alongside the plugin. When launched from any other directory, games are created in the current working directory as normal.
@@ -185,13 +187,13 @@ skills/phaser/
   performance.md              # Optimization tips, texture atlases, object pooling
 ```
 
-**Skills with companion files:** `phaser` (8), `game-qa` (7), `game-audio` (6), `meshyai` (3), `game-assets` (3), `threejs-game` (3+), `threejs-perf` (2 + templates/), `make-game` (3).
+**Skills with companion files:** `phaser` (8), `game-qa` (7), `game-audio` (6), `add-multiplayer` (4), `meshyai` (3), `game-assets` (3), `threejs-game` (3+), `threejs-perf` (2 + templates/), `make-game` (3).
 
 ## Reference vs User-Invocable Skills
 
 Skills come in two flavors with a deliberate separation of concerns:
 
-- **User-invocable skills** (18) — Triggered by slash commands (e.g., `/add-audio`). These handle the full user-facing workflow: detect the game, load reference skills, run the pipeline, validate output. They have `argument-hint` in frontmatter.
+- **User-invocable skills** (19) — Triggered by slash commands (e.g., `/add-audio`). These handle the full user-facing workflow: detect the game, load reference skills, run the pipeline, validate output. They have `argument-hint` in frontmatter.
 - **Reference skills** (11) — Deep domain knowledge loaded by other skills (or directly via `/load`). They contain patterns, code examples, and conventions but don't drive a workflow themselves.
 
 Four domains have both a reference and a user-invocable skill:
@@ -286,4 +288,4 @@ See `TROUBLESHOOTING.md` for common issues including:
 
 ## Trigger Test Suite
 
-See `tests/trigger-tests.md` for manual test prompts (5-7 per skill) verifying correct trigger behavior. Covers all 18 user-invocable skills plus negative tests for prompts that should NOT trigger any skill.
+See `tests/trigger-tests.md` for manual test prompts (5-7 per skill) verifying correct trigger behavior. Covers all 19 user-invocable skills plus negative tests for prompts that should NOT trigger any skill.
