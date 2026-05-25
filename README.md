@@ -2,25 +2,22 @@
 
 **Go from game idea to deployed, monetized browser game in minutes — not hours.**
 
-Tell your AI coding agent "make a space invaders game" and get a fully playable 2D or 3D browser game with pixel art, procedural audio, and automated QA. Deploy instantly to the web. Monetize with [Play.fun](https://play.fun). Share on [Moltbook](https://www.moltbook.com/).
+Tell your AI coding agent "make a space invaders game" and get a fully playable 2D or 3D browser game with pixel art, procedural audio, and automated QA. Deploy instantly to the web. Monetize with [Play.fun](https://play.fun).
 
-Works with **40+ AI coding agents** — Claude Code, Cursor, Windsurf, Cline, and more via `npx skills add`.
-
-**Owner**: [OpusGameLabs](https://github.com/OpusGameLabs)
+Works with **40+ AI coding agents** — Claude Code, Codex, Cursor, and more via `npx skills add`.
 
 ## Install
 
 ```bash
-npx skills add OpusGameLabs/game-creator
+npx skills add playableintelligence/game-creator
 ```
 
 Target a specific agent:
 
 ```bash
-npx skills add OpusGameLabs/game-creator -a claude-code
-npx skills add OpusGameLabs/game-creator -a cursor
-npx skills add OpusGameLabs/game-creator -a codex
-npx skills add OpusGameLabs/game-creator -a antigravity
+npx skills add playableintelligence/game-creator -a claude-code
+npx skills add playableintelligence/game-creator -a codex
+npx skills add playableintelligence/game-creator -a cursor
 ```
 
 ## Quick Start
@@ -215,10 +212,10 @@ MIT (games using `@strudel/web` for audio must use an AGPL-3.0-compatible licens
 
 ## Star History
 
-<a href="https://www.star-history.com/?repos=OpusGameLabs%2Fgame-creator&type=date&legend=top-left">
+<a href="https://www.star-history.com/?repos=playableintelligence%2Fgame-creator&type=date&legend=top-left">
  <picture>
-   <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/chart?repos=OpusGameLabs/game-creator&type=date&theme=dark&legend=top-left" />
-   <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/chart?repos=OpusGameLabs/game-creator&type=date&legend=top-left" />
-   <img alt="Star History Chart" src="https://api.star-history.com/chart?repos=OpusGameLabs/game-creator&type=date&legend=top-left" />
+   <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/chart?repos=playableintelligence/game-creator&type=date&theme=dark&legend=top-left" />
+   <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/chart?repos=playableintelligence/game-creator&type=date&legend=top-left" />
+   <img alt="Star History Chart" src="https://api.star-history.com/chart?repos=playableintelligence/game-creator&type=date&legend=top-left" />
  </picture>
 </a>
